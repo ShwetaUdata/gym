@@ -1,4 +1,4 @@
-import { MembershipType, PRICING, DAY_OFFERS, SPECIAL_OFFERS } from '@/types/gym';
+import { MembershipType, PRICING, DAY_OFFERS, SPECIAL_OFFERS, MONTH_OFFERS } from '@/types/gym';
 
 export function calculateBasePrice(membershipType: MembershipType, months: number): number {
   let monthlyTotal = 0;
@@ -21,13 +21,27 @@ export function getDayOffer(date: Date): number {
   return DAY_OFFERS[day] || 0;
 }
 
+export function getMonthOffer(months: number): number {
+  // For 12+ months, yearly offer applies separately
+  if (months >= 12) return 0;
+  return MONTH_OFFERS[months] || 0;
+}
+
 export function getSpecialOffers(membershipType: MembershipType, months: number): { type: string; percentage: number }[] {
   const offers: { type: string; percentage: number }[] = [];
   
+  // Month-based offer (only for less than 12 months)
+  const monthOffer = getMonthOffer(months);
+  if (monthOffer > 0) {
+    offers.push({ type: `${months} Month${months > 1 ? 's' : ''} Membership`, percentage: monthOffer });
+  }
+  
+  // Yearly membership offer
   if (months >= 12) {
     offers.push({ type: 'Yearly Membership', percentage: SPECIAL_OFFERS.yearlyMembership });
   }
   
+  // Gym + PT combo offer
   if (membershipType.gym && membershipType.pt) {
     offers.push({ type: 'Gym + PT Combo', percentage: SPECIAL_OFFERS.gymPtCombo });
   }

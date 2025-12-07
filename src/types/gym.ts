@@ -67,3 +67,18 @@ export const SPECIAL_OFFERS = {
   yearlyMembership: 25,
   gymPtCombo: 30,
 };
+
+// Month-based discount offers
+export const MONTH_OFFERS: Record<number, number> = {
+  1: 5,    // 1 month = 5%
+  2: 7,    // 2 months = 7%
+  3: 10,   // 3 months = 10%
+  4: 12,   // 4 months = 12%
+  5: 12,   // 5 months = 12%
+  6: 15,   // 6 months = 15%
+  7: 17,   // 7 months = 17%
+  8: 17,   // 8 months = 17%
+  9: 17,   // 9 months = 17%
+  10: 17,  // 10 months = 17%
+  11: 17,  // 11 months = 17%
+};

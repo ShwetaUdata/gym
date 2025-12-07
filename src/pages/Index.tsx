@@ -66,25 +66,21 @@ const Index = () => {
                 icon: Dumbbell,
                 title: 'Gym Training',
                 description: 'Access to all gym equipment and facilities',
-                price: '₹1,500/month',
               },
               {
                 icon: Heart,
                 title: 'Cardio Zone',
                 description: 'Dedicated cardio area with latest machines',
-                price: '₹500/month',
               },
               {
                 icon: Zap,
                 title: 'CrossFit',
                 description: 'High-intensity functional training programs',
-                price: '₹500/month',
               },
               {
                 icon: UserCheck,
                 title: 'Personal Training',
                 description: 'One-on-one sessions with certified trainers',
-                price: '₹12,000/month',
               },
             ].map((feature, index) => (
               <Card 
@@ -98,8 +94,7 @@ const Index = () => {
                     <feature.icon className="w-8 h-8 text-primary" />
                   </div>
                   <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
-                  <p className="text-muted-foreground text-sm mb-4">{feature.description}</p>
-                  <p className="text-primary font-bold">{feature.price}</p>
+                  <p className="text-muted-foreground text-sm">{feature.description}</p>
                 </CardContent>
               </Card>
             ))}
