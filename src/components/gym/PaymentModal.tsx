@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useGym } from '@/context/GymContext';
 import { useToast } from '@/hooks/use-toast';
-import { formatCurrency, calculateBasePrice } from '@/utils/pricing';
+import { formatCurrency, calculateDiscountedPrice } from '@/utils/pricing';
 import { CreditCard, IndianRupee } from 'lucide-react';
 
 interface PaymentModalProps {
@@ -20,8 +20,9 @@ export function PaymentModal({ client, onClose }: PaymentModalProps) {
   const { toast } = useToast();
   
   const totalPaid = client.payments?.reduce((sum, p) => sum + p.paidAmount, 0) || 0;
-  const baseAmount = calculateBasePrice(client.membershipType, client.membershipPeriod);
-  const remainingAmount = baseAmount - totalPaid;
+  // Use stored finalAmount if available, otherwise calculate discounted price
+  const totalAmount = client.finalAmount || calculateDiscountedPrice(client.membershipType, client.membershipPeriod);
+  const remainingAmount = totalAmount - totalPaid;
 
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
@@ -43,7 +44,7 @@ export function PaymentModal({ client, onClose }: PaymentModalProps) {
     const newRemainingAmount = remainingAmount - paymentAmount;
 
     addPayment(client.clientId, {
-      amount: baseAmount,
+      amount: totalAmount,
       paidAmount: paymentAmount,
       remainingAmount: Math.max(0, newRemainingAmount),
       discount: 0,
@@ -73,8 +74,8 @@ export function PaymentModal({ client, onClose }: PaymentModalProps) {
         <div className="p-4 rounded-xl bg-gradient-to-br from-primary/10 to-gym-gold/10 border border-primary/20 mb-4">
           <div className="grid grid-cols-2 gap-4 text-center">
             <div>
-              <p className="text-sm text-muted-foreground">Total Due</p>
-              <p className="text-xl font-bold">{formatCurrency(baseAmount)}</p>
+              <p className="text-sm text-muted-foreground">Total Due (After Discount)</p>
+              <p className="text-xl font-bold">{formatCurrency(totalAmount)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Remaining</p>

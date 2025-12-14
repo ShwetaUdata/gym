@@ -10,6 +10,7 @@ import { useGym } from '@/context/GymContext';
 import { useToast } from '@/hooks/use-toast';
 import { calculateAge, calculateEndDate, getDayOfWeek } from '@/utils/pricing';
 import { MembershipType } from '@/types/gym';
+import { sendWelcomeEmail } from '@/utils/emailService';
 import { User, MapPin, Briefcase, Phone, Calendar, Mail, Dumbbell, Heart, Zap, UserCheck } from 'lucide-react';
 
 const PERIOD_OPTIONS = [
@@ -33,6 +34,7 @@ export function ClientRegistrationForm() {
     dob: '',
     gender: '' as 'male' | 'female' | 'other' | '',
     email: '',
+    slot: '' as 'morning' | 'evening' | '',
     membershipPeriod: '',
     customMonths: '',
     startDate: new Date().toISOString().split('T')[0],
@@ -56,10 +58,10 @@ export function ClientRegistrationForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.mobile || !formData.dob || !formData.gender) {
+    if (!formData.name || !formData.email || !formData.mobile || !formData.dob || !formData.gender || !formData.slot) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields including time slot",
         variant: "destructive",
       });
       return;
@@ -97,6 +99,7 @@ export function ClientRegistrationForm() {
         age: calculatedAge,
         gender: formData.gender as 'male' | 'female' | 'other',
         email: formData.email,
+        slot: formData.slot as 'morning' | 'evening',
         membershipType,
         membershipPeriod: months,
         startDate: formData.startDate,
@@ -104,9 +107,16 @@ export function ClientRegistrationForm() {
         registrationDay,
       });
 
+      // Send welcome email asynchronously
+      sendWelcomeEmail(client).then(success => {
+        if (!success) {
+          console.log('Welcome email could not be sent');
+        }
+      });
+
       toast({
         title: "Registration Successful! 🎉",
-        description: `Welcome to PowerFit Gym! Your Client ID is ${client.clientId}. A welcome email has been sent to ${formData.email}.`,
+        description: `Welcome to PowerFit Gym! Your Client ID is ${client.clientId}. A welcome email is being sent to ${formData.email}.`,
       });
 
       navigate(`/payment/${client.clientId}`);
@@ -233,17 +243,35 @@ export function ClientRegistrationForm() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="address"
-                  placeholder="Enter your address"
-                  className="pl-10"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                />
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="slot">Member Slot *</Label>
+                <Select
+                  value={formData.slot}
+                  onValueChange={(value) => setFormData({ ...formData, slot: value as 'morning' | 'evening' })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select time slot" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="morning">Morning</SelectItem>
+                    <SelectItem value="evening">Evening</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="address"
+                    placeholder="Enter your address"
+                    className="pl-10"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  />
+                </div>
               </div>
             </div>
           </div>

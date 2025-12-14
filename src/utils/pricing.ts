@@ -68,6 +68,23 @@ export function calculateFinalPrice(
   return { finalPrice, totalDiscount: discount };
 }
 
+// Calculate discounted price based on membership period for admin dashboard display
+export function calculateDiscountedPrice(membershipType: MembershipType, months: number): number {
+  const basePrice = calculateBasePrice(membershipType, months);
+  const offers = getSpecialOffers(membershipType, months);
+  
+  // Get the best offer percentage
+  let maxOffer = 0;
+  offers.forEach(offer => {
+    if (offer.percentage > maxOffer) {
+      maxOffer = offer.percentage;
+    }
+  });
+  
+  const discountAmount = (basePrice * maxOffer) / 100;
+  return basePrice - discountAmount;
+}
+
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',

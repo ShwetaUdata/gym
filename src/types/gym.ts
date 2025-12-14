@@ -9,6 +9,7 @@ export interface Client {
   age: number;
   gender: 'male' | 'female' | 'other';
   email: string;
+  slot: 'morning' | 'evening';
   membershipType: MembershipType;
   membershipPeriod: number;
   startDate: string;
@@ -16,6 +17,7 @@ export interface Client {
   registrationDay: string;
   createdAt: string;
   payments: Payment[];
+  finalAmount?: number;
 }
 
 export interface MembershipType {
