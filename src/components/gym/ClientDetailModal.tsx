@@ -2,7 +2,7 @@ import { Client } from '@/types/gym';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency, calculateBasePrice } from '@/utils/pricing';
+import { formatCurrency, calculateDiscountedPrice } from '@/utils/pricing';
 import { 
   User, Phone, Mail, Calendar, MapPin, Briefcase, 
   CreditCard, Clock, CheckCircle 
@@ -16,8 +16,9 @@ interface ClientDetailModalProps {
 
 export function ClientDetailModal({ client, onClose, onAddPayment }: ClientDetailModalProps) {
   const totalPaid = client.payments?.reduce((sum, p) => sum + p.paidAmount, 0) || 0;
-  const baseAmount = calculateBasePrice(client.membershipType, client.membershipPeriod);
-  const remainingAmount = baseAmount - totalPaid;
+  // Use stored finalAmount if available, otherwise calculate discounted price
+  const totalAmount = client.finalAmount || calculateDiscountedPrice(client.membershipType, client.membershipPeriod);
+  const remainingAmount = totalAmount - totalPaid;
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -89,6 +90,7 @@ export function ClientDetailModal({ client, onClose, onAddPayment }: ClientDetai
               </div>
               <div className="space-y-2 text-sm">
                 <p>Period: {client.membershipPeriod} months</p>
+                <p>Slot: {client.slot ? client.slot.charAt(0).toUpperCase() + client.slot.slice(1) : 'Not specified'}</p>
                 <p>Start: {new Date(client.startDate).toLocaleDateString()}</p>
                 <p>End: {new Date(client.endDate).toLocaleDateString()}</p>
                 <p>Registered: {client.registrationDay}</p>
@@ -104,8 +106,8 @@ export function ClientDetailModal({ client, onClose, onAddPayment }: ClientDetai
             </h3>
             <div className="grid grid-cols-3 gap-4 text-center mb-4">
               <div>
-                <p className="text-sm text-muted-foreground">Total Amount</p>
-                <p className="text-xl font-bold">{formatCurrency(baseAmount)}</p>
+                <p className="text-sm text-muted-foreground">Total Amount (After Discount)</p>
+                <p className="text-xl font-bold">{formatCurrency(totalAmount)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Paid</p>

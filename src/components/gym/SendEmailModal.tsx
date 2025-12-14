@@ -6,7 +6,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { formatCurrency, calculateBasePrice } from '@/utils/pricing';
+import { formatCurrency, calculateDiscountedPrice } from '@/utils/pricing';
+import { supabase } from '@/integrations/supabase/client';
 import { Send, Mail } from 'lucide-react';
 
 interface SendEmailModalProps {
@@ -16,7 +17,7 @@ interface SendEmailModalProps {
 
 const EMAIL_TEMPLATES = {
   welcome: {
-    subject: 'Welcome to PowerFit Gym!',
+    subject: 'Welcome to PowerFit Gym! 🎉',
     body: `Dear {{name}},
 
 Welcome to the PowerFit Gym family! 🎉
@@ -25,6 +26,7 @@ We're thrilled to have you join us on your fitness journey. Your membership is n
 
 Membership Details:
 - Client ID: {{clientId}}
+- Time Slot: {{slot}}
 - Start Date: {{startDate}}
 - End Date: {{endDate}}
 
@@ -55,7 +57,7 @@ PowerFit Gym Team`,
 This is a friendly reminder regarding your membership payment.
 
 Payment Status:
-- Total Amount: {{totalAmount}}
+- Total Amount (After Discount): {{totalAmount}}
 - Paid: {{paidAmount}}
 - Remaining: {{remainingAmount}}
 
@@ -67,7 +69,7 @@ Thank you,
 PowerFit Gym Team`,
   },
   custom: {
-    subject: '',
+    subject: 'Message from PowerFit Gym',
     body: '',
   },
 };
@@ -79,8 +81,8 @@ export function SendEmailModal({ client, onClose }: SendEmailModalProps) {
   const [isSending, setIsSending] = useState(false);
 
   const totalPaid = client.payments?.reduce((sum, p) => sum + p.paidAmount, 0) || 0;
-  const baseAmount = calculateBasePrice(client.membershipType, client.membershipPeriod);
-  const remainingAmount = baseAmount - totalPaid;
+  const totalAmount = client.finalAmount || calculateDiscountedPrice(client.membershipType, client.membershipPeriod);
+  const remainingAmount = totalAmount - totalPaid;
 
   const getProcessedMessage = () => {
     if (templateType === 'custom') return customMessage;
@@ -88,28 +90,72 @@ export function SendEmailModal({ client, onClose }: SendEmailModalProps) {
     let body = EMAIL_TEMPLATES[templateType].body;
     body = body.replace(/{{name}}/g, client.name);
     body = body.replace(/{{clientId}}/g, client.clientId);
+    body = body.replace(/{{slot}}/g, client.slot ? client.slot.charAt(0).toUpperCase() + client.slot.slice(1) : 'Not specified');
     body = body.replace(/{{startDate}}/g, new Date(client.startDate).toLocaleDateString());
     body = body.replace(/{{endDate}}/g, new Date(client.endDate).toLocaleDateString());
-    body = body.replace(/{{totalAmount}}/g, formatCurrency(baseAmount));
+    body = body.replace(/{{totalAmount}}/g, formatCurrency(totalAmount));
     body = body.replace(/{{paidAmount}}/g, formatCurrency(totalPaid));
     body = body.replace(/{{remainingAmount}}/g, formatCurrency(remainingAmount));
     
     return body;
   };
 
+  const getHtmlMessage = () => {
+    const message = getProcessedMessage();
+    const subject = templateType === 'custom' ? 'Message from PowerFit Gym' : EMAIL_TEMPLATES[templateType].subject;
+    
+    return `
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #8b5cf6, #f59e0b); padding: 20px; border-radius: 10px 10px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0;">PowerFit Gym</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
+          ${message.split('\n').map(line => `<p style="margin: 10px 0; color: #374151;">${line || '&nbsp;'}</p>`).join('')}
+        </div>
+        <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
+          <p>© ${new Date().getFullYear()} PowerFit Gym. All rights reserved.</p>
+        </div>
+      </div>
+    `;
+  };
+
   const handleSend = async () => {
     setIsSending(true);
     
-    // Simulate sending email
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    toast({
-      title: "Email Sent! ✉️",
-      description: `Email has been sent to ${client.email}`,
-    });
-    
-    setIsSending(false);
-    onClose();
+    try {
+      const subject = templateType === 'custom' ? 'Message from PowerFit Gym' : EMAIL_TEMPLATES[templateType].subject;
+      const html = getHtmlMessage();
+
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: {
+          to: client.email,
+          subject,
+          html,
+          clientName: client.name,
+          emailType: templateType,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Email Sent! ✉️",
+        description: `Email has been sent to ${client.email}`,
+      });
+      
+      onClose();
+    } catch (error: any) {
+      console.error('Error sending email:', error);
+      toast({
+        title: "Failed to send email",
+        description: error.message || "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
