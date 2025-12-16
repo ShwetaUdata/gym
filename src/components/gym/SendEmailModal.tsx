@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency, calculateDiscountedPrice } from '@/utils/pricing';
-import { supabase } from '@/integrations/supabase/client';
+import { emailApi } from '@/services/apiService';
 import { Send, Mail } from 'lucide-react';
 
 interface SendEmailModalProps {
@@ -126,19 +126,13 @@ export function SendEmailModal({ client, onClose }: SendEmailModalProps) {
       const subject = templateType === 'custom' ? 'Message from PowerFit Gym' : EMAIL_TEMPLATES[templateType].subject;
       const html = getHtmlMessage();
 
-      const { data, error } = await supabase.functions.invoke('send-email', {
-        body: {
-          to: client.email,
-          subject,
-          html,
-          clientName: client.name,
-          emailType: templateType,
-        },
+      // Call Express backend API
+      await emailApi.send({
+        clientId: client.clientId,
+        emailType: templateType,
+        subject,
+        html,
       });
-
-      if (error) {
-        throw error;
-      }
 
       toast({
         title: "Email Sent! ✉️",
@@ -150,7 +144,7 @@ export function SendEmailModal({ client, onClose }: SendEmailModalProps) {
       console.error('Error sending email:', error);
       toast({
         title: "Failed to send email",
-        description: error.message || "Please try again later.",
+        description: error.message || "Please try again later. Make sure the backend server is running.",
         variant: "destructive",
       });
     } finally {
