@@ -11,11 +11,27 @@ import { ArrowLeft, AlertCircle } from 'lucide-react';
 const Payment = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
-  const { getClientById } = useGym();
+  const { getClientById, loading } = useGym();
   const [showQR, setShowQR] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState(0);
 
   const client = clientId ? getClientById(clientId) : undefined;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <GymHeader />
+        <main className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading client data...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   if (!client) {
     return (

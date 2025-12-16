@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useGym } from '@/context/GymContext';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency, calculateDiscountedPrice } from '@/utils/pricing';
+import { paymentApi } from '@/services/apiService';
 import { CreditCard, IndianRupee } from 'lucide-react';
 
 interface PaymentModalProps {
@@ -16,8 +17,9 @@ interface PaymentModalProps {
 }
 
 export function PaymentModal({ client, onClose }: PaymentModalProps) {
-  const { addPayment } = useGym();
+  const { refreshClients } = useGym();
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const totalPaid = client.payments?.reduce((sum, p) => sum + p.paidAmount, 0) || 0;
   // Use stored finalAmount if available, otherwise calculate discounted price
@@ -28,7 +30,7 @@ export function PaymentModal({ client, onClose }: PaymentModalProps) {
   const [notes, setNotes] = useState('');
   const [paidDate, setPaidDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const paymentAmount = parseFloat(amount);
@@ -41,24 +43,35 @@ export function PaymentModal({ client, onClose }: PaymentModalProps) {
       return;
     }
 
-    const newRemainingAmount = remainingAmount - paymentAmount;
+    setIsSubmitting(true);
 
-    addPayment(client.clientId, {
-      amount: totalAmount,
-      paidAmount: paymentAmount,
-      remainingAmount: Math.max(0, newRemainingAmount),
-      discount: 0,
-      discountType: '',
-      paidDate,
-      notes,
-    });
+    try {
+      await paymentApi.create({
+        clientId: client.clientId,
+        amount: totalAmount,
+        finalAmount: totalAmount,
+        paidAmount: paymentAmount,
+        notes,
+      });
 
-    toast({
-      title: "Payment Recorded! 💰",
-      description: `${formatCurrency(paymentAmount)} payment recorded for ${client.name}`,
-    });
+      // Refresh clients to get updated payment data
+      refreshClients();
 
-    onClose();
+      toast({
+        title: "Payment Recorded! 💰",
+        description: `${formatCurrency(paymentAmount)} payment recorded for ${client.name}`,
+      });
+
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Payment Failed",
+        description: error instanceof Error ? error.message : "Something went wrong.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -122,11 +135,11 @@ export function PaymentModal({ client, onClose }: PaymentModalProps) {
           </div>
 
           <div className="flex gap-4 pt-4">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+            <Button type="button" variant="outline" className="flex-1" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit" variant="hero" className="flex-1">
-              Record Payment
+            <Button type="submit" variant="hero" className="flex-1" disabled={isSubmitting}>
+              {isSubmitting ? 'Recording...' : 'Record Payment'}
             </Button>
           </div>
         </form>
