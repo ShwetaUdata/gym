@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { emailApi } from '@/services/apiService';
 import { Client } from '@/types/gym';
 import { formatCurrency, calculateDiscountedPrice } from '@/utils/pricing';
 
@@ -36,22 +36,16 @@ export async function sendWelcomeEmail(client: Client): Promise<boolean> {
       </div>
     `;
 
-    const { data, error } = await supabase.functions.invoke('send-email', {
-      body: {
-        to: client.email,
-        subject: 'Welcome to PowerFit Gym! 🎉',
-        html,
-        clientName: client.name,
-        emailType: 'welcome',
-      },
-    });
+    // This will be handled by the local context for now
+    // When backend is connected, uncomment below:
+    // await emailApi.send({
+    //   clientId: client.clientId,
+    //   emailType: 'welcome',
+    //   subject: 'Welcome to PowerFit Gym! 🎉',
+    //   html,
+    // });
 
-    if (error) {
-      console.error('Error sending welcome email:', error);
-      return false;
-    }
-
-    console.log('Welcome email sent successfully to:', client.email);
+    console.log('Welcome email would be sent to:', client.email);
     return true;
   } catch (error) {
     console.error('Failed to send welcome email:', error);
@@ -59,26 +53,23 @@ export async function sendWelcomeEmail(client: Client): Promise<boolean> {
   }
 }
 
-export async function checkAndSendBirthdayEmails(clients: Client[]): Promise<void> {
+export async function sendCustomEmail(
+  client: Client,
+  subject: string,
+  html: string,
+  emailType: string = 'custom'
+): Promise<boolean> {
   try {
-    const clientsData = clients.map(c => ({
-      clientId: c.clientId,
-      name: c.name,
-      email: c.email,
-      dob: c.dob,
-    }));
-
-    const { data, error } = await supabase.functions.invoke('birthday-check', {
-      body: { clients: clientsData },
+    await emailApi.send({
+      clientId: client.clientId,
+      emailType,
+      subject,
+      html,
     });
-
-    if (error) {
-      console.error('Error checking birthdays:', error);
-      return;
-    }
-
-    console.log('Birthday check completed:', data);
+    console.log('Email sent successfully to:', client.email);
+    return true;
   } catch (error) {
-    console.error('Failed to check birthdays:', error);
+    console.error('Failed to send email:', error);
+    return false;
   }
 }
