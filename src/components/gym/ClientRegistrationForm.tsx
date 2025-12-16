@@ -10,7 +10,7 @@ import { useGym } from '@/context/GymContext';
 import { useToast } from '@/hooks/use-toast';
 import { calculateAge, calculateEndDate, getDayOfWeek } from '@/utils/pricing';
 import { MembershipType } from '@/types/gym';
-import { sendWelcomeEmail } from '@/utils/emailService';
+import { clientApi } from '@/services/apiService';
 import { User, MapPin, Briefcase, Phone, Calendar, Mail, Dumbbell, Heart, Zap, UserCheck } from 'lucide-react';
 
 const PERIOD_OPTIONS = [
@@ -23,7 +23,7 @@ const PERIOD_OPTIONS = [
 
 export function ClientRegistrationForm() {
   const navigate = useNavigate();
-  const { addClient } = useGym();
+  const { refreshClients } = useGym();
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -90,7 +90,7 @@ export function ClientRegistrationForm() {
     try {
       const registrationDay = getDayOfWeek(new Date());
       
-      const client = addClient({
+      const response = await clientApi.register({
         name: formData.name,
         address: formData.address,
         occupation: formData.occupation,
@@ -107,23 +107,21 @@ export function ClientRegistrationForm() {
         registrationDay,
       });
 
-      // Send welcome email asynchronously
-      sendWelcomeEmail(client).then(success => {
-        if (!success) {
-          console.log('Welcome email could not be sent');
-        }
-      });
+      const client = response.client;
+      
+      // Refresh clients in context
+      refreshClients();
 
       toast({
         title: "Registration Successful! 🎉",
-        description: `Welcome to PowerFit Gym! Your Client ID is ${client.clientId}. A welcome email is being sent to ${formData.email}.`,
+        description: `Welcome to PowerFit Gym! Your Client ID is ${client.clientId}. A welcome email has been sent to ${formData.email}.`,
       });
 
       navigate(`/payment/${client.clientId}`);
     } catch (error) {
       toast({
         title: "Registration Failed",
-        description: "Something went wrong. Please try again.",
+        description: error instanceof Error ? error.message : "Something went wrong. Please try again.",
         variant: "destructive",
       });
     } finally {

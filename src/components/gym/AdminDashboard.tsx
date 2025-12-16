@@ -16,13 +16,24 @@ import {
 } from 'lucide-react';
 
 export function AdminDashboard() {
-  const { clients, adminLogout, deleteClient, getClientBySearch } = useGym();
+  const { clients, loading, adminLogout, deleteClient, getClientBySearch } = useGym();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [emailClient, setEmailClient] = useState<Client | null>(null);
   const [paymentClient, setPaymentClient] = useState<Client | null>(null);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading clients...</p>
+        </div>
+      </div>
+    );
+  }
 
   const filteredClients = getClientBySearch(searchTerm);
 

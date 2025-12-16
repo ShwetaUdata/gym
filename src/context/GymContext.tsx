@@ -1,14 +1,15 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Client, Payment } from '@/types/gym';
+import { clientApi } from '@/services/apiService';
 
 interface GymContextType {
   clients: Client[];
-  addClient: (client: Omit<Client, 'id' | 'clientId' | 'createdAt' | 'payments'>) => Client;
+  loading: boolean;
+  refreshClients: () => Promise<void>;
   updateClient: (clientId: string, updates: Partial<Client>) => void;
   deleteClient: (clientId: string) => void;
   getClientBySearch: (searchTerm: string) => Client[];
   getClientById: (clientId: string) => Client | undefined;
-  addPayment: (clientId: string, payment: Omit<Payment, 'id' | 'clientId'>) => void;
   isAdminLoggedIn: boolean;
   adminLogin: (username: string, password: string) => boolean;
   adminLogout: () => void;
@@ -16,46 +17,34 @@ interface GymContextType {
 
 const GymContext = createContext<GymContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'gym_clients';
 const ADMIN_STORAGE_KEY = 'gym_admin_logged_in';
 
 export function GymProvider({ children }: { children: ReactNode }) {
   const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
-  const [nextId, setNextId] = useState(101);
 
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsedClients = JSON.parse(stored);
-      setClients(parsedClients);
-      if (parsedClients.length > 0) {
-        const maxId = Math.max(...parsedClients.map((c: Client) => parseInt(c.clientId)));
-        setNextId(maxId + 1);
-      }
-    }
-    const adminStored = localStorage.getItem(ADMIN_STORAGE_KEY);
-    if (adminStored === 'true') {
-      setIsAdminLoggedIn(true);
+  const refreshClients = useCallback(async () => {
+    try {
+      setLoading(true);
+      const fetchedClients = await clientApi.getAll();
+      setClients(fetchedClients);
+    } catch (error) {
+      console.error('Failed to fetch clients:', error);
+      // Fallback to empty array on error
+      setClients([]);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
-  }, [clients]);
-
-  const addClient = (clientData: Omit<Client, 'id' | 'clientId' | 'createdAt' | 'payments'>): Client => {
-    const newClient: Client = {
-      ...clientData,
-      id: nextId,
-      clientId: nextId.toString(),
-      createdAt: new Date().toISOString(),
-      payments: [],
-    };
-    setClients(prev => [...prev, newClient]);
-    setNextId(prev => prev + 1);
-    return newClient;
-  };
+    refreshClients();
+    const adminStored = localStorage.getItem(ADMIN_STORAGE_KEY);
+    if (adminStored === 'true') {
+      setIsAdminLoggedIn(true);
+    }
+  }, [refreshClients]);
 
   const updateClient = (clientId: string, updates: Partial<Client>) => {
     setClients(prev =>
@@ -85,25 +74,6 @@ export function GymProvider({ children }: { children: ReactNode }) {
     return clients.find(client => client.clientId === clientId);
   };
 
-  const addPayment = (clientId: string, payment: Omit<Payment, 'id' | 'clientId'>) => {
-    setClients(prev =>
-      prev.map(client => {
-        if (client.clientId === clientId) {
-          const newPayment: Payment = {
-            ...payment,
-            id: (client.payments?.length || 0) + 1,
-            clientId,
-          };
-          return {
-            ...client,
-            payments: [...(client.payments || []), newPayment],
-          };
-        }
-        return client;
-      })
-    );
-  };
-
   const adminLogin = (username: string, password: string): boolean => {
     if (username === 'gymnasium' && password === 'usbv7173') {
       setIsAdminLoggedIn(true);
@@ -122,12 +92,12 @@ export function GymProvider({ children }: { children: ReactNode }) {
     <GymContext.Provider
       value={{
         clients,
-        addClient,
+        loading,
+        refreshClients,
         updateClient,
         deleteClient,
         getClientBySearch,
         getClientById,
-        addPayment,
         isAdminLoggedIn,
         adminLogin,
         adminLogout,
