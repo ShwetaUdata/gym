@@ -3,7 +3,7 @@ import { Client } from '@/types/gym';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency, calculateBasePrice } from '@/utils/pricing';
+import { formatCurrency, calculateDiscountedPrice } from '@/utils/pricing';
 import { 
   User, Phone, Mail, Calendar, MapPin, Briefcase, 
   Eye, Edit, Trash2, Send, CreditCard, ChevronDown, ChevronUp 
@@ -21,8 +21,9 @@ export function ClientCard({ client, onView, onEdit, onDelete, onSendEmail }: Cl
   const [isExpanded, setIsExpanded] = useState(false);
   
   const totalPaid = client.payments?.reduce((sum, p) => sum + p.paidAmount, 0) || 0;
-  const baseAmount = calculateBasePrice(client.membershipType, client.membershipPeriod);
-  const remainingAmount = baseAmount - totalPaid;
+  // Use stored finalAmount if available, otherwise calculate discounted price
+  const totalAmount = client.finalAmount || calculateDiscountedPrice(client.membershipType, client.membershipPeriod);
+  const remainingAmount = totalAmount - totalPaid;
 
   const getMembershipBadges = () => {
     const badges = [];
@@ -143,8 +144,8 @@ export function ClientCard({ client, onView, onEdit, onDelete, onSendEmail }: Cl
               </h4>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total</p>
-                  <p className="font-bold text-lg">{formatCurrency(baseAmount)}</p>
+                  <p className="text-sm text-muted-foreground">Total (After Discount)</p>
+                  <p className="font-bold text-lg">{formatCurrency(totalAmount)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Paid</p>
