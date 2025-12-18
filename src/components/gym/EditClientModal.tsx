@@ -33,25 +33,33 @@ export function EditClientModal({ client, onClose }: EditClientModalProps) {
 
   const [membershipType, setMembershipType] = useState<MembershipType>(client.membershipType);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const months = parseInt(formData.membershipPeriod);
     const endDate = calculateEndDate(formData.startDate, months);
 
-    updateClient(client.clientId, {
-      ...formData,
-      membershipPeriod: months,
-      endDate,
-      membershipType,
-    });
+    try {
+      await updateClient(client.clientId, {
+        ...formData,
+        membershipPeriod: months,
+        endDate,
+        membershipType,
+      });
 
-    toast({
-      title: "Client Updated",
-      description: "The client information has been updated successfully.",
-    });
+      toast({
+        title: "Client Updated",
+        description: "The client information has been updated successfully.",
+      });
 
-    onClose();
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: error instanceof Error ? error.message : "Something went wrong.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

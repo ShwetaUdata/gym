@@ -6,8 +6,8 @@ interface GymContextType {
   clients: Client[];
   loading: boolean;
   refreshClients: () => Promise<void>;
-  updateClient: (clientId: string, updates: Partial<Client>) => void;
-  deleteClient: (clientId: string) => void;
+  updateClient: (clientId: string, updates: Partial<Client>) => Promise<void>;
+  deleteClient: (clientId: string) => Promise<void>;
   getClientBySearch: (searchTerm: string) => Client[];
   getClientById: (clientId: string) => Client | undefined;
   isAdminLoggedIn: boolean;
@@ -46,17 +46,23 @@ export function GymProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshClients]);
 
-  const updateClient = (clientId: string, updates: Partial<Client>) => {
-    setClients(prev =>
-      prev.map(client =>
-        client.clientId === clientId ? { ...client, ...updates } : client
-      )
-    );
-  };
+  const updateClient = useCallback(async (clientId: string, updates: Partial<Client>) => {
+    try {
+      await clientApi.update(clientId, updates);
+      await refreshClients();
+    } catch (error) {
+      console.error('Failed to update client:', error);
+    }
+  }, [refreshClients]);
 
-  const deleteClient = (clientId: string) => {
-    setClients(prev => prev.filter(client => client.clientId !== clientId));
-  };
+  const deleteClient = useCallback(async (clientId: string) => {
+    try {
+      await clientApi.remove(clientId);
+      await refreshClients();
+    } catch (error) {
+      console.error('Failed to delete client:', error);
+    }
+  }, [refreshClients]);
 
   const getClientBySearch = (searchTerm: string): Client[] => {
     if (!searchTerm) return clients;

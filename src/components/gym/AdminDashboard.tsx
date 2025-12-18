@@ -37,12 +37,20 @@ export function AdminDashboard() {
 
   const filteredClients = getClientBySearch(searchTerm);
 
-  const handleDelete = (clientId: string) => {
-    if (window.confirm('Are you sure you want to delete this client?')) {
-      deleteClient(clientId);
+  const handleDelete = async (clientId: string) => {
+    if (!window.confirm('Are you sure you want to delete this client?')) return;
+
+    try {
+      await deleteClient(clientId);
       toast({
         title: "Client Deleted",
         description: "The client has been removed from the system.",
+      });
+    } catch (error) {
+      toast({
+        title: "Delete Failed",
+        description: error instanceof Error ? error.message : "Something went wrong.",
+        variant: "destructive",
       });
     }
   };
