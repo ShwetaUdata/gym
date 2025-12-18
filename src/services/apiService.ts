@@ -43,6 +43,19 @@ export const clientApi = {
   getById: async (clientId: string) => {
     return fetchApi<Client>(API_ENDPOINTS.clients.getById(clientId));
   },
+
+  update: async (clientId: string, updates: Partial<Client>) => {
+    return fetchApi<{ success: boolean; client: Client }>(API_ENDPOINTS.clients.getById(clientId), {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  },
+
+  remove: async (clientId: string) => {
+    return fetchApi<{ success: boolean; message: string }>(API_ENDPOINTS.clients.getById(clientId), {
+      method: 'DELETE',
+    });
+  },
 };
 
 // Payment API

@@ -18,17 +18,30 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware - CORS Configuration
-app.use(cors({
-  origin: true,
+// NOTE: For local dev + simple deployments, allow requests from any origin.
+// If you want to lock this down, set CORS_ORIGIN="https://your-frontend.com,http://localhost:8080"
+const allowedOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow non-browser requests (no Origin) + all origins by default
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.length === 0) return callback(null, true);
+    return callback(null, allowedOrigins.includes(origin));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
+  credentials: false,
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
-
-// Handle preflight requests
-app.options('*', cors());
 
 // Database Setup
 let db;
@@ -286,8 +299,17 @@ app.post('/api/clients/register', async (req, res) => {
 
     const newClient = await db.get('SELECT * FROM clients WHERE clientId = ?', [nextClientId]);
 
+    const clientForResponse = {
+      ...newClient,
+      membershipType:
+        typeof newClient?.membershipType === 'string'
+          ? JSON.parse(newClient.membershipType)
+          : newClient.membershipType,
+      payments: [],
+    };
+
     // Send welcome email
-    const { subject, html } = emailTemplates.welcome(newClient);
+    const { subject, html } = emailTemplates.welcome(clientForResponse);
     const welcomeResult = await sendEmail(email, subject, html);
 
     if (welcomeResult && welcomeResult.ok) {
@@ -300,7 +322,7 @@ app.post('/api/clients/register', async (req, res) => {
 
     res.status(201).json({
       success: true,
-      client: newClient,
+      client: clientForResponse,
       message: 'Client registered successfully. Welcome email sent.'
     });
   } catch (error) {
@@ -313,11 +335,18 @@ app.post('/api/clients/register', async (req, res) => {
 app.get('/api/clients', async (req, res) => {
   try {
     const clients = await db.all('SELECT * FROM clients');
-    // Parse membershipType JSON for each client
-    const parsedClients = clients.map(c => ({
-      ...c,
-      membershipType: typeof c.membershipType === 'string' ? JSON.parse(c.membershipType) : c.membershipType
-    }));
+
+    const parsedClients = await Promise.all(
+      clients.map(async (c) => {
+        const payments = await db.all('SELECT * FROM payments WHERE clientId = ? ORDER BY paidDate DESC', [c.clientId]);
+        return {
+          ...c,
+          membershipType: typeof c.membershipType === 'string' ? JSON.parse(c.membershipType) : c.membershipType,
+          payments: payments || [],
+        };
+      })
+    );
+
     res.json(parsedClients);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch clients', details: error.message });
@@ -331,8 +360,14 @@ app.get('/api/clients/:clientId', async (req, res) => {
     if (!client) {
       return res.status(404).json({ error: 'Client not found' });
     }
-    client.membershipType = typeof client.membershipType === 'string' ? JSON.parse(client.membershipType) : client.membershipType;
-    res.json(client);
+
+    const payments = await db.all('SELECT * FROM payments WHERE clientId = ? ORDER BY paidDate DESC', [req.params.clientId]);
+
+    res.json({
+      ...client,
+      membershipType: typeof client.membershipType === 'string' ? JSON.parse(client.membershipType) : client.membershipType,
+      payments: payments || [],
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch client', details: error.message });
   }
@@ -378,7 +413,19 @@ app.put('/api/clients/:clientId', async (req, res) => {
     );
 
     const updatedClient = await db.get('SELECT * FROM clients WHERE clientId = ?', [clientId]);
-    res.json({ success: true, client: updatedClient });
+    const payments = await db.all('SELECT * FROM payments WHERE clientId = ? ORDER BY paidDate DESC', [clientId]);
+
+    res.json({
+      success: true,
+      client: {
+        ...updatedClient,
+        membershipType:
+          typeof updatedClient?.membershipType === 'string'
+            ? JSON.parse(updatedClient.membershipType)
+            : updatedClient.membershipType,
+        payments: payments || [],
+      },
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update client', details: error.message });
   }
