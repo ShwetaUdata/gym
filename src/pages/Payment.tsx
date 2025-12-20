@@ -11,7 +11,7 @@ import { ArrowLeft, AlertCircle } from 'lucide-react';
 const Payment = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
-  const { getClientById, loading } = useGym();
+  const { getClientById, updateClient, loading } = useGym();
   const [showQR, setShowQR] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState(0);
 
@@ -55,7 +55,13 @@ const Payment = () => {
     );
   }
 
-  const handleProceedToPayment = (amount: number, discount: number) => {
+  const handleProceedToPayment = async (amount: number, discount: number) => {
+    // Save the final amount with offer applied to the client record
+    try {
+      await updateClient(client.clientId, { finalAmount: amount });
+    } catch (error) {
+      console.error('Failed to update final amount:', error);
+    }
     setPaymentAmount(amount);
     setShowQR(true);
   };
