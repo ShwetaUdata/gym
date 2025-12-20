@@ -1,11 +1,9 @@
 // API Configuration for Express Backend
-//
-// Dev mode uses same-origin "/api" + Vite proxy (avoids CORS).
-// Production can set VITE_API_URL to a full backend origin.
+// Set VITE_API_URL in .env for production, defaults to localhost:5000 for dev
 
 const envBaseUrl = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "");
 
-export const API_BASE_URL = import.meta.env.DEV ? "" : (envBaseUrl || "");
+export const API_BASE_URL = envBaseUrl || "http://localhost:5000";
 
 const withBase = (path: string) => `${API_BASE_URL}${path}`;
 
