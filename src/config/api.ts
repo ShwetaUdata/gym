@@ -1,25 +1,32 @@
 // API Configuration for Express Backend
-// Update this URL when deploying to production
+//
+// Dev mode uses same-origin "/api" + Vite proxy (avoids CORS).
+// Production can set VITE_API_URL to a full backend origin.
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const envBaseUrl = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "");
+
+export const API_BASE_URL = import.meta.env.DEV ? "" : (envBaseUrl || "");
+
+const withBase = (path: string) => `${API_BASE_URL}${path}`;
 
 export const API_ENDPOINTS = {
   // Client endpoints
   clients: {
-    register: `${API_BASE_URL}/api/clients/register`,
-    getAll: `${API_BASE_URL}/api/clients`,
-    getById: (id: string) => `${API_BASE_URL}/api/clients/${id}`,
+    register: withBase("/api/clients/register"),
+    getAll: withBase("/api/clients"),
+    getById: (id: string) => withBase(`/api/clients/${id}`),
   },
   // Payment endpoints
   payments: {
-    create: `${API_BASE_URL}/api/payments`,
-    getByClientId: (id: string) => `${API_BASE_URL}/api/payments/${id}`,
+    create: withBase("/api/payments"),
+    getByClientId: (id: string) => withBase(`/api/payments/${id}`),
   },
   // Email endpoints
   emails: {
-    send: `${API_BASE_URL}/api/emails/send`,
-    getHistory: (id: string) => `${API_BASE_URL}/api/emails/${id}`,
+    send: withBase("/api/emails/send"),
+    getHistory: (id: string) => withBase(`/api/emails/${id}`),
   },
   // Health check
-  health: `${API_BASE_URL}/api/health`,
+  health: withBase("/api/health"),
 };
+
