@@ -1,9 +1,10 @@
 // API Configuration for Express Backend
-// Set VITE_API_URL in .env for production, defaults to localhost:5000 for dev
+// For Lovable preview, uses Railway backend. For local dev, set VITE_API_URL=http://localhost:5000
 
 const envBaseUrl = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "");
 
-export const API_BASE_URL = envBaseUrl || "http://localhost:5000";
+// Default to Railway backend for Lovable preview environment
+export const API_BASE_URL = envBaseUrl || "https://work-backend-production-be8c.up.railway.app";
 
 const withBase = (path: string) => `${API_BASE_URL}${path}`;
 
