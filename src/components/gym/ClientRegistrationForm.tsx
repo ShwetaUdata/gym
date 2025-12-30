@@ -11,7 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { calculateAge, calculateEndDate, getDayOfWeek } from '@/utils/pricing';
 import { MembershipType } from '@/types/gym';
 import { clientApi } from '@/services/apiService';
-import { User, MapPin, Briefcase, Phone, Calendar, Mail, Dumbbell, Heart, Zap, UserCheck } from 'lucide-react';
+import { User, MapPin, Briefcase, Phone, Calendar, Mail, Dumbbell, Heart, Zap, UserCheck, FileText } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const PERIOD_OPTIONS = [
   { value: '1', label: '1 Month' },
@@ -48,6 +49,7 @@ export function ClientRegistrationForm() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const calculatedAge = formData.dob ? calculateAge(formData.dob) : 0;
   const months = formData.membershipPeriod === 'custom' 
@@ -377,9 +379,51 @@ export function ClientRegistrationForm() {
             </div>
           </div>
 
-          <Button type="submit" variant="hero" size="xl" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Registering...' : 'Complete Registration'}
-          </Button>
+          {/* Terms and Conditions */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              Terms & Conditions
+            </h3>
+            
+            <div className="p-4 rounded-xl bg-secondary/30 border border-border space-y-3 max-h-48 overflow-y-auto text-sm text-muted-foreground">
+              <p className="font-semibold text-foreground">PowerFit Gym Membership Terms:</p>
+              <ol className="list-decimal list-inside space-y-2">
+                <li>Membership fees are non-refundable once paid.</li>
+                <li>Members must carry their ID card at all times during gym hours.</li>
+                <li>Gym timings: Morning 5:00 AM - 11:00 AM, Evening 4:00 PM - 10:00 PM.</li>
+                <li>Members are responsible for their personal belongings. The gym is not liable for any loss or damage.</li>
+                <li>Proper gym attire and footwear must be worn at all times.</li>
+                <li>Members must follow the instructions of trainers and staff.</li>
+                <li>Use of equipment should be done under supervision or with proper knowledge.</li>
+                <li>Members must wipe down equipment after use.</li>
+                <li>No smoking, alcohol, or any prohibited substances are allowed on the premises.</li>
+                <li>The gym reserves the right to terminate membership in case of misconduct.</li>
+                <li>Health declaration: Members confirm they are physically fit to exercise and have no medical conditions that would restrict their participation.</li>
+                <li>Members must inform the gym of any health issues or injuries before starting workouts.</li>
+              </ol>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="terms"
+                checked={acceptedTerms}
+                onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+              />
+              <label
+                htmlFor="terms"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              >
+                I have read and agree to the Terms & Conditions
+              </label>
+            </div>
+          </div>
+
+          {acceptedTerms && (
+            <Button type="submit" variant="hero" size="xl" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? 'Registering...' : 'Complete Registration'}
+            </Button>
+          )}
         </form>
       </CardContent>
     </Card>
