@@ -50,6 +50,7 @@ export function ClientRegistrationForm() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [termsConfirmName, setTermsConfirmName] = useState('');
 
   const calculatedAge = formData.dob ? calculateAge(formData.dob) : 0;
   const months = formData.membershipPeriod === 'custom' 
@@ -107,6 +108,7 @@ export function ClientRegistrationForm() {
         startDate: formData.startDate,
         endDate,
         registrationDay,
+        termsAcceptedBy: termsConfirmName,
       });
 
       const client = response.client;
@@ -417,9 +419,27 @@ export function ClientRegistrationForm() {
                 I have read and agree to the Terms & Conditions
               </label>
             </div>
+
+            {acceptedTerms && (
+              <div className="space-y-2 mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                <Label htmlFor="termsConfirmName" className="text-primary font-medium">
+                  Type your full name to confirm acceptance *
+                </Label>
+                <Input
+                  id="termsConfirmName"
+                  placeholder="Enter your full name exactly as above"
+                  value={termsConfirmName}
+                  onChange={(e) => setTermsConfirmName(e.target.value)}
+                  className="border-primary/30 focus:border-primary"
+                />
+                {termsConfirmName && termsConfirmName.toLowerCase().trim() !== formData.name.toLowerCase().trim() && (
+                  <p className="text-xs text-destructive">Name must match the full name entered above</p>
+                )}
+              </div>
+            )}
           </div>
 
-          {acceptedTerms && (
+          {acceptedTerms && termsConfirmName.toLowerCase().trim() === formData.name.toLowerCase().trim() && termsConfirmName.trim() !== '' && (
             <Button type="submit" variant="hero" size="xl" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? 'Registering...' : 'Complete Registration'}
             </Button>

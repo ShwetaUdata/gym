@@ -18,6 +18,7 @@ export interface Client {
   createdAt: string;
   payments: Payment[];
   finalAmount?: number;
+  termsAcceptedBy?: string;
 }
 
 export interface MembershipType {
