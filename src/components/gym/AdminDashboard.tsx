@@ -12,8 +12,10 @@ import { Client } from '@/types/gym';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Search, Users, LogOut, CreditCard, TrendingUp, 
-  UserPlus, Dumbbell 
+  UserPlus, Dumbbell, Download 
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export function AdminDashboard() {
   const { clients, loading, adminLogout, deleteClient, getClientBySearch } = useGym();
@@ -55,6 +57,62 @@ export function AdminDashboard() {
     }
   };
 
+  const getMembershipTypes = (membershipType: Client['membershipType']) => {
+    const types = [];
+    if (membershipType.gym) types.push('Gym');
+    if (membershipType.cardio) types.push('Cardio');
+    if (membershipType.crossfit) types.push('Crossfit');
+    if (membershipType.pt) types.push('PT');
+    return types.join(', ') || 'None';
+  };
+
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    
+    // Title
+    doc.setFontSize(20);
+    doc.text('Gym Members Report', 14, 20);
+    
+    // Subtitle with date
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleDateString('en-IN')}`, 14, 28);
+    doc.text(`Total Members: ${clients.length} | Active: ${activeMembers}`, 14, 34);
+
+    // Table data
+    const tableData = clients.map((client) => [
+      client.clientId,
+      client.name,
+      client.mobile,
+      client.email,
+      client.gender,
+      getMembershipTypes(client.membershipType),
+      client.slot,
+      new Date(client.startDate).toLocaleDateString('en-IN'),
+      new Date(client.endDate).toLocaleDateString('en-IN'),
+      new Date(client.endDate) > new Date() ? 'Active' : 'Expired',
+      `₹${(client.payments || []).reduce((sum, p) => sum + p.paidAmount, 0).toLocaleString()}`,
+    ]);
+
+    autoTable(doc, {
+      startY: 40,
+      head: [[
+        'Client ID', 'Name', 'Mobile', 'Email', 'Gender', 
+        'Membership', 'Slot', 'Start Date', 'End Date', 'Status', 'Paid'
+      ]],
+      body: tableData,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [41, 128, 185] },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+    });
+
+    doc.save(`gym-members-${new Date().toISOString().split('T')[0]}.pdf`);
+    
+    toast({
+      title: "PDF Downloaded",
+      description: `${clients.length} client records exported successfully.`,
+    });
+  };
+
   const totalRevenue = clients.reduce((sum, client) => {
     const payments = client.payments || [];
     return sum + payments.reduce((pSum, p) => pSum + p.paidAmount, 0);
@@ -65,15 +123,21 @@ export function AdminDashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold gradient-text">Admin Dashboard</h1>
           <p className="text-muted-foreground">Manage your gym members and payments</p>
         </div>
-        <Button variant="outline" onClick={adminLogout} className="gap-2">
-          <LogOut className="w-4 h-4" />
-          Logout
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleDownloadPDF} className="gap-2">
+            <Download className="w-4 h-4" />
+            Download PDF
+          </Button>
+          <Button variant="outline" onClick={adminLogout} className="gap-2">
+            <LogOut className="w-4 h-4" />
+            Logout
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
