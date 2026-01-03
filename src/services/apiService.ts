@@ -4,12 +4,18 @@ import { Client, Payment } from '@/types/gym';
 // Generic fetch wrapper with error handling
 async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {
   try {
+    const method = (options?.method || 'GET').toUpperCase();
+    const headers = new Headers(options?.headers);
+
+    // Avoid forcing Content-Type on GET/HEAD (it triggers CORS preflight).
+    const hasBody = options?.body !== undefined && options?.body !== null;
+    if (hasBody && method !== 'GET' && method !== 'HEAD' && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
+    }
+
     const response = await fetch(url, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
+      headers,
     });
 
     if (!response.ok) {
