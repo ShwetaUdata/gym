@@ -8,6 +8,7 @@ import { ClientDetailModal } from './ClientDetailModal';
 import { EditClientModal } from './EditClientModal';
 import { SendEmailModal } from './SendEmailModal';
 import { PaymentModal } from './PaymentModal';
+import { ExportPdfModal, ExportOptions } from './ExportPdfModal';
 import { Client } from '@/types/gym';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -25,6 +26,7 @@ export function AdminDashboard() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [emailClient, setEmailClient] = useState<Client | null>(null);
   const [paymentClient, setPaymentClient] = useState<Client | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   if (loading) {
     return (
@@ -66,50 +68,128 @@ export function AdminDashboard() {
     return types.join(', ') || 'None';
   };
 
-  const handleDownloadPDF = () => {
+  const handleExportPDF = (options: ExportOptions) => {
     const doc = new jsPDF({ orientation: 'landscape' });
     
+    // Filter clients by date range
+    let filteredData = [...clients];
+    if (options.startDate || options.endDate) {
+      filteredData = clients.filter(client => {
+        const clientDate = new Date(client.createdAt);
+        const start = options.startDate ? new Date(options.startDate) : null;
+        const end = options.endDate ? new Date(options.endDate) : null;
+        
+        if (start && end) {
+          return clientDate >= start && clientDate <= end;
+        } else if (start) {
+          return clientDate >= start;
+        } else if (end) {
+          return clientDate <= end;
+        }
+        return true;
+      });
+    }
+
+    let yPos = 20;
+
     // Title
     doc.setFontSize(20);
-    doc.text('Gym Members Report', 14, 20);
+    doc.text('Gym Database Report', 14, yPos);
+    yPos += 10;
     
     // Subtitle with date
     doc.setFontSize(10);
-    doc.text(`Generated on: ${new Date().toLocaleDateString('en-IN')}`, 14, 28);
-    doc.text(`Total Members: ${clients.length} | Active: ${activeMembers}`, 14, 34);
+    doc.text(`Generated on: ${new Date().toLocaleDateString('en-IN')}`, 14, yPos);
+    yPos += 6;
+    
+    if (options.startDate || options.endDate) {
+      doc.text(`Date Range: ${options.startDate || 'Start'} to ${options.endDate || 'End'}`, 14, yPos);
+      yPos += 6;
+    }
 
-    // Table data
-    const tableData = clients.map((client) => [
-      client.clientId,
-      client.name,
-      client.mobile,
-      client.email,
-      client.gender,
-      getMembershipTypes(client.membershipType),
-      client.slot,
-      new Date(client.startDate).toLocaleDateString('en-IN'),
-      new Date(client.endDate).toLocaleDateString('en-IN'),
-      new Date(client.endDate) > new Date() ? 'Active' : 'Expired',
-      `₹${(client.payments || []).reduce((sum, p) => sum + p.paidAmount, 0).toLocaleString()}`,
-    ]);
+    // Clients Section
+    if (options.sections.clients || options.sections.all) {
+      doc.text(`Total Members: ${filteredData.length} | Active: ${filteredData.filter(c => new Date(c.endDate) > new Date()).length}`, 14, yPos);
+      yPos += 10;
 
-    autoTable(doc, {
-      startY: 40,
-      head: [[
-        'Client ID', 'Name', 'Mobile', 'Email', 'Gender', 
-        'Membership', 'Slot', 'Start Date', 'End Date', 'Status', 'Paid'
-      ]],
-      body: tableData,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [41, 128, 185] },
-      alternateRowStyles: { fillColor: [245, 245, 245] },
-    });
+      const clientTableData = filteredData.map((client) => [
+        client.clientId,
+        client.name,
+        client.mobile,
+        client.email,
+        client.gender,
+        getMembershipTypes(client.membershipType),
+        client.slot,
+        new Date(client.startDate).toLocaleDateString('en-IN'),
+        new Date(client.endDate).toLocaleDateString('en-IN'),
+        new Date(client.endDate) > new Date() ? 'Active' : 'Expired',
+      ]);
 
-    doc.save(`gym-members-${new Date().toISOString().split('T')[0]}.pdf`);
+      autoTable(doc, {
+        startY: yPos,
+        head: [[
+          'Client ID', 'Name', 'Mobile', 'Email', 'Gender', 
+          'Membership', 'Slot', 'Start Date', 'End Date', 'Status'
+        ]],
+        body: clientTableData,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [41, 128, 185] },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // Payments Section
+    if (options.sections.payments || options.sections.all) {
+      const allPayments: any[] = [];
+      filteredData.forEach(client => {
+        (client.payments || []).forEach(payment => {
+          allPayments.push({
+            clientId: client.clientId,
+            clientName: client.name,
+            ...payment
+          });
+        });
+      });
+
+      if (allPayments.length > 0) {
+        if (yPos > 180) {
+          doc.addPage();
+          yPos = 20;
+        }
+
+        doc.setFontSize(14);
+        doc.text('Payment Records', 14, yPos);
+        yPos += 8;
+
+        const paymentTableData = allPayments.map(p => [
+          p.clientId,
+          p.clientName,
+          new Date(p.date).toLocaleDateString('en-IN'),
+          `₹${p.paidAmount.toLocaleString()}`,
+          p.method || 'N/A',
+          p.note || '-'
+        ]);
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Client ID', 'Name', 'Date', 'Amount', 'Method', 'Note']],
+          body: paymentTableData,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [39, 174, 96] },
+          alternateRowStyles: { fillColor: [245, 245, 245] },
+        });
+
+        yPos = (doc as any).lastAutoTable.finalY + 15;
+      }
+    }
+
+    doc.save(`gym-report-${new Date().toISOString().split('T')[0]}.pdf`);
     
     toast({
       title: "PDF Downloaded",
-      description: `${clients.length} client records exported successfully.`,
+      description: `Report exported successfully.`,
     });
   };
 
@@ -129,9 +209,9 @@ export function AdminDashboard() {
           <p className="text-muted-foreground">Manage your gym members and payments</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleDownloadPDF} className="gap-2">
+          <Button variant="outline" onClick={() => setShowExportModal(true)} className="gap-2">
             <Download className="w-4 h-4" />
-            Download PDF
+            Export PDF
           </Button>
           <Button variant="outline" onClick={adminLogout} className="gap-2">
             <LogOut className="w-4 h-4" />
@@ -278,6 +358,12 @@ export function AdminDashboard() {
           onClose={() => setPaymentClient(null)}
         />
       )}
+
+      <ExportPdfModal
+        open={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onSubmit={handleExportPDF}
+      />
     </div>
   );
 }
