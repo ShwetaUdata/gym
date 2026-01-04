@@ -16,9 +16,9 @@ export function getDayOfWeek(date: Date): string {
   return days[date.getDay()];
 }
 
-export function getDayOffer(date: Date): number {
-  const day = getDayOfWeek(date);
-  return DAY_OFFERS[day] || 0;
+// Day-based offers removed - only membership period offers apply
+export function getDayOffer(_date: Date): number {
+  return 0; // No day-based offers
 }
 
 export function getMonthOffer(months: number): number {
