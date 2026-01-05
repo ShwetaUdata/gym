@@ -19,6 +19,7 @@ export interface Client {
   payments: Payment[];
   finalAmount?: number;
   termsAcceptedBy?: string;
+  photo?: string;
 }
 
 export interface MembershipType {

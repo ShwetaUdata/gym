@@ -118,6 +118,7 @@ async function initializeDatabase() {
 // Email Configuration
 const EMAIL_USER = process.env.EMAIL_USER || 'usgymnasium2021@gmail.com';
 const EMAIL_PASS = process.env.EMAIL_PASSWORD || 'fcqd gayb zccq tzjs';
+const EMAIL_FROM = `"US GYMNASIUM" <${EMAIL_USER}>`;
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -137,61 +138,87 @@ transporter.verify().then(() => {
 // Email Templates
 const emailTemplates = {
   welcome: (client) => ({
-    subject: 'Welcome to PowerFit Gym! 🎉',
+    subject: 'Welcome to US Gymnasium! 🎉',
     html: `
-      <div style="font-family: Arial, sans-serif; padding: 20px;">
-        <h2>Welcome ${client.name}!</h2>
-        <p>We're thrilled to have you join PowerFit Gym.</p>
-        <h3>Your Membership Details:</h3>
-        <ul>
-          <li><strong>Client ID:</strong> ${client.clientId}</li>
-          <li><strong>Email:</strong> ${client.email}</li>
-          <li><strong>Membership Type:</strong> ${client.membershipType}</li>
-          <li><strong>Start Date:</strong> ${new Date(client.startDate).toLocaleDateString()}</li>
-          <li><strong>End Date:</strong> ${new Date(client.endDate).toLocaleDateString()}</li>
-          <li><strong>Slot:</strong> ${client.slot}</li>
-        </ul>
-        <p>Visit us soon and start your fitness journey!</p>
-        <p>Best regards,<br/>PowerFit Gym Team</p>
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #8b5cf6, #f59e0b); padding: 20px; border-radius: 10px 10px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0;">US Gymnasium</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
+          <h2 style="color: #374151;">Welcome ${client.name}!</h2>
+          <p style="color: #374151;">We're thrilled to have you join the US Gymnasium family.</p>
+          <h3 style="color: #374151;">Your Membership Details:</h3>
+          <ul style="color: #374151;">
+            <li><strong>Client ID:</strong> ${client.clientId}</li>
+            <li><strong>Email:</strong> ${client.email}</li>
+            <li><strong>Membership Type:</strong> ${client.membershipType}</li>
+            <li><strong>Start Date:</strong> ${new Date(client.startDate).toLocaleDateString()}</li>
+            <li><strong>End Date:</strong> ${new Date(client.endDate).toLocaleDateString()}</li>
+            <li><strong>Slot:</strong> ${client.slot}</li>
+          </ul>
+          <p style="color: #374151;">Visit us soon and start your fitness journey!</p>
+          <p style="color: #374151;">Best regards,<br/><strong>US Gymnasium Team</strong></p>
+        </div>
+        <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
+          <p>© ${new Date().getFullYear()} US Gymnasium. All rights reserved.</p>
+        </div>
       </div>
     `
   }),
   birthday: (client) => ({
-    subject: `Happy Birthday ${client.name}! 🎂`,
+    subject: `Happy Birthday ${client.name}! 🎂 - US Gymnasium`,
     html: `
-      <div style="font-family: Arial, sans-serif; padding: 20px;">
-        <h2>Happy Birthday, ${client.name}! 🎉🎂</h2>
-        <p>On this special day, the entire PowerFit Gym family wishes you health, happiness, and strength!</p>
-        <p>As a birthday treat, enjoy a special workout session on us. Visit the front desk to claim your birthday reward.</p>
-        <p>Keep crushing your goals!</p>
-        <p>Warm wishes,<br/>PowerFit Gym Team</p>
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #8b5cf6, #f59e0b); padding: 20px; border-radius: 10px 10px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0;">🎂 Happy Birthday! 🎉</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
+          <h2 style="color: #374151;">Happy Birthday, ${client.name}!</h2>
+          <p style="color: #374151;">On this special day, the entire US Gymnasium family wishes you health, happiness, and strength!</p>
+          <p style="color: #374151;">As a birthday treat, enjoy a special workout session on us. Visit the front desk to claim your birthday reward.</p>
+          <p style="color: #374151;">Keep crushing your goals!</p>
+          <p style="color: #374151;">Warm wishes,<br/><strong>US Gymnasium Team</strong></p>
+        </div>
+        <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
+          <p>© ${new Date().getFullYear()} US Gymnasium. All rights reserved.</p>
+        </div>
       </div>
     `
   }),
   paymentReminder: (client, amount) => ({
-    subject: 'Payment Reminder - PowerFit Gym',
+    subject: 'Payment Reminder - US Gymnasium',
     html: `
-      <div style="font-family: Arial, sans-serif; padding: 20px;">
-        <h2>Payment Reminder</h2>
-        <p>Dear ${client.name},</p>
-        <p>This is a friendly reminder about your pending payment.</p>
-        <h3>Payment Details:</h3>
-        <ul>
-          <li><strong>Remaining Amount:</strong> ₹${amount}</li>
-          <li><strong>Client ID:</strong> ${client.clientId}</li>
-        </ul>
-        <p>Please complete your payment at your earliest convenience.</p>
-        <p>Thank you,<br/>PowerFit Gym Team</p>
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #8b5cf6, #f59e0b); padding: 20px; border-radius: 10px 10px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0;">Payment Reminder</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
+          <p style="color: #374151; font-size: 18px;">Dear ${client.name},</p>
+          <p style="color: #374151;">This is a friendly reminder about your pending payment at US Gymnasium.</p>
+          <div style="background: #fff; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e5e7eb;">
+            <h3 style="margin: 0 0 15px 0; color: #374151;">Payment Details:</h3>
+            <ul style="color: #374151; margin: 0; padding-left: 20px;">
+              <li><strong>Remaining Amount:</strong> ₹${amount}</li>
+              <li><strong>Client ID:</strong> ${client.clientId}</li>
+            </ul>
+          </div>
+          <p style="color: #374151;">Please complete your payment at your earliest convenience.</p>
+          <p style="color: #374151;">Thank you,<br/><strong>US Gymnasium Team</strong></p>
+        </div>
+        <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
+          <p>© ${new Date().getFullYear()} US Gymnasium. All rights reserved.</p>
+        </div>
       </div>
     `
   })
 };
 
+
 // Utility function to send emails
 async function sendEmail(to, subject, html) {
   try {
     const info = await transporter.sendMail({
-      from: EMAIL_USER,
+      from: EMAIL_FROM,
       to,
       subject,
       html
