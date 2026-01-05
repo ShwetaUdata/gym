@@ -9,11 +9,15 @@ import { EditClientModal } from './EditClientModal';
 import { SendEmailModal } from './SendEmailModal';
 import { PaymentModal } from './PaymentModal';
 import { ExportPdfModal, ExportOptions } from './ExportPdfModal';
+import { BirthdayAlertModal } from './BirthdayAlertModal';
+import { PendingPaymentsModal } from './PendingPaymentsModal';
+import { FestivalEmailModal } from './FestivalEmailModal';
 import { Client } from '@/types/gym';
 import { useToast } from '@/hooks/use-toast';
+import { calculateDiscountedPrice } from '@/utils/pricing';
 import { 
   Search, Users, LogOut, CreditCard, TrendingUp, 
-  UserPlus, Dumbbell, Download 
+  UserPlus, Dumbbell, Download, Cake, IndianRupee, PartyPopper
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -27,6 +31,9 @@ export function AdminDashboard() {
   const [emailClient, setEmailClient] = useState<Client | null>(null);
   const [paymentClient, setPaymentClient] = useState<Client | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showBirthdayModal, setShowBirthdayModal] = useState(false);
+  const [showPendingPayments, setShowPendingPayments] = useState(false);
+  const [showFestivalEmail, setShowFestivalEmail] = useState(false);
 
   if (loading) {
     return (
@@ -40,6 +47,36 @@ export function AdminDashboard() {
   }
 
   const filteredClients = getClientBySearch(searchTerm);
+
+  // Count today's birthdays
+  const today = new Date();
+  const todayMonth = today.getMonth() + 1;
+  const todayDay = today.getDate();
+  const birthdayCount = clients.filter((client) => {
+    if (!client.dob) return false;
+    let dobDate: Date;
+    if (client.dob.includes('-')) {
+      const parts = client.dob.split('-');
+      if (parts[0].length === 4) {
+        dobDate = new Date(client.dob);
+      } else {
+        dobDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+      }
+    } else if (client.dob.includes('/')) {
+      const parts = client.dob.split('/');
+      dobDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+    } else {
+      return false;
+    }
+    return dobDate.getMonth() + 1 === todayMonth && dobDate.getDate() === todayDay;
+  }).length;
+
+  // Count pending payments
+  const pendingPaymentsCount = clients.filter((client) => {
+    const totalPaid = client.payments?.reduce((sum, p) => sum + p.paidAmount, 0) || 0;
+    const totalAmount = client.finalAmount || calculateDiscountedPrice(client.membershipType, client.membershipPeriod);
+    return totalAmount - totalPaid > 0;
+  }).length;
 
   const handleDelete = async (clientId: string) => {
     if (!window.confirm('Are you sure you want to delete this client?')) return;
@@ -220,6 +257,46 @@ export function AdminDashboard() {
         </div>
       </div>
 
+      {/* Alert Buttons */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Button
+          variant="outline"
+          className="h-auto py-4 flex flex-col items-center gap-2 relative"
+          onClick={() => setShowBirthdayModal(true)}
+        >
+          <Cake className="w-6 h-6 text-primary" />
+          <span className="font-medium">Birthdays Today</span>
+          {birthdayCount > 0 && (
+            <span className="absolute -top-2 -right-2 w-6 h-6 bg-primary text-primary-foreground rounded-full text-xs flex items-center justify-center font-bold">
+              {birthdayCount}
+            </span>
+          )}
+        </Button>
+
+        <Button
+          variant="outline"
+          className="h-auto py-4 flex flex-col items-center gap-2 relative"
+          onClick={() => setShowPendingPayments(true)}
+        >
+          <IndianRupee className="w-6 h-6 text-destructive" />
+          <span className="font-medium">Pending Payments</span>
+          {pendingPaymentsCount > 0 && (
+            <span className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full text-xs flex items-center justify-center font-bold">
+              {pendingPaymentsCount}
+            </span>
+          )}
+        </Button>
+
+        <Button
+          variant="outline"
+          className="h-auto py-4 flex flex-col items-center gap-2"
+          onClick={() => setShowFestivalEmail(true)}
+        >
+          <PartyPopper className="w-6 h-6 text-gym-gold" />
+          <span className="font-medium">Festival Email</span>
+        </Button>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card variant="glass">
@@ -364,6 +441,28 @@ export function AdminDashboard() {
         onClose={() => setShowExportModal(false)}
         onSubmit={handleExportPDF}
       />
+
+      {showBirthdayModal && (
+        <BirthdayAlertModal
+          clients={clients}
+          onClose={() => setShowBirthdayModal(false)}
+        />
+      )}
+
+      {showPendingPayments && (
+        <PendingPaymentsModal
+          clients={clients}
+          onClose={() => setShowPendingPayments(false)}
+          onAddPayment={(client) => setPaymentClient(client)}
+        />
+      )}
+
+      {showFestivalEmail && (
+        <FestivalEmailModal
+          clients={clients}
+          onClose={() => setShowFestivalEmail(false)}
+        />
+      )}
     </div>
   );
 }

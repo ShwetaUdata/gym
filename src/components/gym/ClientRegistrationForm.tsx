@@ -11,8 +11,9 @@ import { useToast } from '@/hooks/use-toast';
 import { calculateAge, calculateEndDate, getDayOfWeek } from '@/utils/pricing';
 import { MembershipType } from '@/types/gym';
 import { clientApi } from '@/services/apiService';
-import { User, MapPin, Briefcase, Phone, Calendar, Mail, Dumbbell, Heart, Zap, UserCheck, FileText } from 'lucide-react';
+import { User, MapPin, Briefcase, Phone, Calendar, Mail, Dumbbell, Heart, Zap, UserCheck, FileText, Camera } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { PhotoCapture } from './PhotoCapture';
 
 const PERIOD_OPTIONS = [
   { value: '1', label: '1 Month' },
@@ -51,6 +52,7 @@ export function ClientRegistrationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [termsConfirmName, setTermsConfirmName] = useState('');
+  const [clientPhoto, setClientPhoto] = useState<string>('');
 
   const calculatedAge = formData.dob ? calculateAge(formData.dob) : 0;
   const months = formData.membershipPeriod === 'custom' 
@@ -109,6 +111,7 @@ export function ClientRegistrationForm() {
         endDate,
         registrationDay,
         termsAcceptedBy: termsConfirmName,
+        photo: clientPhoto || undefined,
       });
 
       const client = response.client;
@@ -118,7 +121,7 @@ export function ClientRegistrationForm() {
 
       toast({
         title: "Registration Successful! 🎉",
-        description: `Welcome to PowerFit Gym! Your Client ID is ${client.clientId}. A welcome email has been sent to ${formData.email}.`,
+        description: `Welcome to US Gymnasium! Your Client ID is ${client.clientId}.`,
       });
 
       navigate(`/payment/${client.clientId}`);
@@ -137,10 +140,24 @@ export function ClientRegistrationForm() {
     <Card variant="glass" className="max-w-2xl mx-auto animate-slide-up">
       <CardHeader className="text-center pb-2">
         <CardTitle className="text-3xl gradient-text">New Member Registration</CardTitle>
-        <CardDescription>Join the PowerFit family and transform your life</CardDescription>
+        <CardDescription>Join the US Gymnasium family and transform your life</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Photo Capture */}
+          <div className="flex justify-center pb-4">
+            <div className="space-y-2 text-center">
+              <Label className="flex items-center justify-center gap-2">
+                <Camera className="w-5 h-5 text-primary" />
+                Client Photo
+              </Label>
+              <PhotoCapture 
+                onCapture={(photo) => setClientPhoto(photo)} 
+                currentPhoto={clientPhoto}
+              />
+            </div>
+          </div>
+
           {/* Personal Information */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -389,7 +406,7 @@ export function ClientRegistrationForm() {
             </h3>
             
             <div className="p-4 rounded-xl bg-secondary/30 border border-border space-y-3 max-h-48 overflow-y-auto text-sm text-muted-foreground">
-              <p className="font-semibold text-foreground">PowerFit Gym Membership Terms:</p>
+              <p className="font-semibold text-foreground">US Gymnasium Membership Terms:</p>
               <ol className="list-decimal list-inside space-y-2">
                 <li>Membership fees are non-refundable once paid.</li>
                 <li>Members must carry their ID card at all times during gym hours.</li>
