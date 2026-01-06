@@ -21,7 +21,7 @@ export function GymHeader({ showNav = true }: GymHeaderProps) {
             <Dumbbell className="w-6 h-6 text-primary-foreground" />
           </div>
           <div className="leading-tight">
-            <p className="text-xl font-bold gradient-text">PowerFit Gym</p>
+            <p className="text-xl font-bold gradient-text">US Gymnasium</p>
             <p className="text-xs text-muted-foreground">Transform Your Life</p>
           </div>
         </Link>

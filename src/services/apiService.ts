@@ -68,9 +68,12 @@ export const clientApi = {
 export const paymentApi = {
   create: async (paymentData: {
     clientId: string;
+    name?: string;
     amount: number;
     finalAmount: number;
     paidAmount: number;
+    membershipPeriod?: number;
+    offerDiscount?: number;
     discount?: number;
     discountType?: string;
     notes?: string;
