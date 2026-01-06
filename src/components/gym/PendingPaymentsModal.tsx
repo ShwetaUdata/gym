@@ -14,10 +14,36 @@ interface PendingPaymentsModalProps {
   onAddPayment: (client: Client) => void;
 }
 
+const COOLDOWN_DAYS = 7;
+
+const getPaymentReminderKey = (clientId: string) => `payment_reminder_${clientId}`;
+
+const isPaymentReminderInCooldown = (clientId: string): boolean => {
+  const sentTime = localStorage.getItem(getPaymentReminderKey(clientId));
+  if (!sentTime) return false;
+  const sentDate = new Date(parseInt(sentTime, 10));
+  const now = new Date();
+  const diffDays = (now.getTime() - sentDate.getTime()) / (1000 * 60 * 60 * 24);
+  return diffDays < COOLDOWN_DAYS;
+};
+
+const markPaymentReminderSent = (clientId: string) => {
+  localStorage.setItem(getPaymentReminderKey(clientId), Date.now().toString());
+};
+
 export function PendingPaymentsModal({ clients, onClose, onAddPayment }: PendingPaymentsModalProps) {
   const { toast } = useToast();
   const [sendingTo, setSendingTo] = useState<string | null>(null);
-  const [sentEmails, setSentEmails] = useState<Set<string>>(new Set());
+  const [sentEmails, setSentEmails] = useState<Set<string>>(() => {
+    // Initialize with clients already in cooldown
+    const inCooldown = new Set<string>();
+    clients.forEach(c => {
+      if (isPaymentReminderInCooldown(c.clientId)) {
+        inCooldown.add(c.clientId);
+      }
+    });
+    return inCooldown;
+  });
 
   // Get clients with pending payments
   const clientsWithPendingPayments = clients.filter((client) => {
@@ -82,6 +108,7 @@ export function PendingPaymentsModal({ clients, onClose, onAddPayment }: Pending
         html,
       });
 
+      markPaymentReminderSent(client.clientId);
       setSentEmails(prev => new Set([...prev, client.clientId]));
       
       toast({

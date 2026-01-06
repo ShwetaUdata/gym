@@ -68,7 +68,7 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     await client.send({
-      from: EMAIL_USER,
+      from: `US GYMNASIUM <${EMAIL_USER}>`,
       to: to,
       subject: subject,
       content: "auto",
