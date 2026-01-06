@@ -10,12 +10,39 @@ import { Cake, Send, Mail, User } from 'lucide-react';
 interface BirthdayAlertModalProps {
   clients: Client[];
   onClose: () => void;
+  onEmailSent?: () => void;
 }
 
-export function BirthdayAlertModal({ clients, onClose }: BirthdayAlertModalProps) {
+const COOLDOWN_DAYS = 1; // Only 1 day for birthdays since it's a specific day
+
+const getBirthdayEmailKey = (clientId: string) => `birthday_email_${clientId}`;
+
+export const isBirthdayEmailInCooldown = (clientId: string): boolean => {
+  const sentTime = localStorage.getItem(getBirthdayEmailKey(clientId));
+  if (!sentTime) return false;
+  const sentDate = new Date(parseInt(sentTime, 10));
+  const now = new Date();
+  const diffDays = (now.getTime() - sentDate.getTime()) / (1000 * 60 * 60 * 24);
+  return diffDays < COOLDOWN_DAYS;
+};
+
+const markBirthdayEmailSent = (clientId: string) => {
+  localStorage.setItem(getBirthdayEmailKey(clientId), Date.now().toString());
+};
+
+export function BirthdayAlertModal({ clients, onClose, onEmailSent }: BirthdayAlertModalProps) {
   const { toast } = useToast();
   const [sendingTo, setSendingTo] = useState<string | null>(null);
-  const [sentEmails, setSentEmails] = useState<Set<string>>(new Set());
+  const [sentEmails, setSentEmails] = useState<Set<string>>(() => {
+    // Initialize with clients already in cooldown
+    const inCooldown = new Set<string>();
+    clients.forEach(c => {
+      if (isBirthdayEmailInCooldown(c.clientId)) {
+        inCooldown.add(c.clientId);
+      }
+    });
+    return inCooldown;
+  });
 
   // Get today's birthday clients
   const today = new Date();
@@ -24,6 +51,8 @@ export function BirthdayAlertModal({ clients, onClose }: BirthdayAlertModalProps
 
   const birthdayClients = clients.filter((client) => {
     if (!client.dob) return false;
+    // Skip if already sent email today (in cooldown)
+    if (isBirthdayEmailInCooldown(client.clientId)) return false;
     
     // Handle different DOB formats
     let dobDate: Date;
@@ -77,7 +106,11 @@ export function BirthdayAlertModal({ clients, onClose }: BirthdayAlertModalProps
         html,
       });
 
+      markBirthdayEmailSent(client.clientId);
       setSentEmails(prev => new Set([...prev, client.clientId]));
+      
+      // Notify parent to update counts
+      onEmailSent?.();
       
       toast({
         title: "Birthday Email Sent! 🎂",
@@ -108,7 +141,7 @@ export function BirthdayAlertModal({ clients, onClose }: BirthdayAlertModalProps
           {birthdayClients.length === 0 ? (
             <div className="text-center py-8">
               <Cake className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No birthdays today!</p>
+              <p className="text-muted-foreground">No birthdays to send wishes today!</p>
             </div>
           ) : (
             <>

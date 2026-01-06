@@ -53,6 +53,7 @@ export function ClientRegistrationForm() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [termsConfirmName, setTermsConfirmName] = useState('');
   const [clientPhoto, setClientPhoto] = useState<string>('');
+  const [hasScrolledTerms, setHasScrolledTerms] = useState(false);
 
   const calculatedAge = formData.dob ? calculateAge(formData.dob) : 0;
   const months = formData.membershipPeriod === 'custom' 
@@ -405,7 +406,17 @@ export function ClientRegistrationForm() {
               Terms & Conditions
             </h3>
             
-            <div className="p-4 rounded-xl bg-secondary/30 border border-border space-y-3 max-h-48 overflow-y-auto text-sm text-muted-foreground">
+            <div 
+              className="p-4 rounded-xl bg-secondary/30 border border-border space-y-3 max-h-48 overflow-y-auto text-sm text-muted-foreground scrollbar-hide"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              onScroll={(e) => {
+                const element = e.currentTarget;
+                const isAtBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 10;
+                if (isAtBottom && !hasScrolledTerms) {
+                  setHasScrolledTerms(true);
+                }
+              }}
+            >
               <p className="font-semibold text-foreground">US Gymnasium Membership Terms:</p>
               <ol className="list-decimal list-inside space-y-2">
                 <li>Membership fees are non-refundable once paid.</li>
@@ -423,19 +434,26 @@ export function ClientRegistrationForm() {
               </ol>
             </div>
 
-            <div className="flex items-center space-x-3">
-              <Checkbox
-                id="terms"
-                checked={acceptedTerms}
-                onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
-              />
-              <label
-                htmlFor="terms"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-              >
-                I have read and agree to the Terms & Conditions
-              </label>
-            </div>
+            {!hasScrolledTerms ? (
+              <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Please scroll and read the terms and conditions to continue
+              </p>
+            ) : (
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  id="terms"
+                  checked={acceptedTerms}
+                  onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+                />
+                <label
+                  htmlFor="terms"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  I have read and agree to the Terms & Conditions
+                </label>
+              </div>
+            )}
 
             {acceptedTerms && (
               <div className="space-y-2 mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
