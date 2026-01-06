@@ -3,6 +3,7 @@ import cors from 'cors';
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import cron from 'node-cron';
 import nodemailer from 'nodemailer';
@@ -10,6 +11,15 @@ import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
 
 dotenv.config();
+
+// Photo storage directory - Change this path as needed
+const PHOTO_STORAGE_PATH = process.env.PHOTO_STORAGE_PATH || 'C:/GymPhotos';
+
+// Ensure photo directory exists
+if (!fs.existsSync(PHOTO_STORAGE_PATH)) {
+  fs.mkdirSync(PHOTO_STORAGE_PATH, { recursive: true });
+  console.log(`Created photo storage directory: ${PHOTO_STORAGE_PATH}`);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -71,6 +81,7 @@ async function initializeDatabase() {
       endDate TEXT,
       registrationDay TEXT,
       finalAmount REAL,
+      photoPath TEXT,
       termsAccepted INTEGER DEFAULT 0,
       createdAt TEXT,
       updatedAt TEXT
@@ -79,10 +90,13 @@ async function initializeDatabase() {
     CREATE TABLE IF NOT EXISTS payments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       clientId TEXT,
+      clientName TEXT,
       amount REAL,
       finalAmount REAL,
       paidAmount REAL,
       remainingAmount REAL,
+      membershipPeriod INTEGER,
+      offerDiscount REAL DEFAULT 0,
       discount REAL DEFAULT 0,
       discountType TEXT,
       paidDate TEXT,
@@ -298,7 +312,7 @@ app.post('/api/clients/register', async (req, res) => {
     const {
       name, email, mobile, dob, age, gender, address, occupation,
       slot, membershipType, membershipPeriod, startDate, endDate,
-      registrationDay, finalAmount, termsAccepted
+      registrationDay, finalAmount, termsAccepted, photo
     } = req.body;
 
     if (!name || !email || !mobile || !dob || !slot) {
@@ -311,16 +325,31 @@ app.post('/api/clients/register', async (req, res) => {
       : '101';
 
     const now = new Date().toISOString();
+    
+    // Save photo to disk if provided
+    let photoPath = null;
+    if (photo && photo.startsWith('data:image')) {
+      try {
+        const base64Data = photo.replace(/^data:image\/\w+;base64,/, '');
+        const sanitizedName = name.replace(/[^a-zA-Z0-9]/g, '_');
+        const fileName = `${sanitizedName}_${nextClientId}.jpg`;
+        photoPath = path.join(PHOTO_STORAGE_PATH, fileName);
+        fs.writeFileSync(photoPath, base64Data, 'base64');
+        console.log(`Photo saved: ${photoPath}`);
+      } catch (photoErr) {
+        console.error('Error saving photo:', photoErr);
+      }
+    }
 
     await db.run(
       `INSERT INTO clients (clientId, name, email, mobile, dob, age, gender, address, 
        occupation, slot, membershipType, membershipPeriod, startDate, endDate, 
-       registrationDay, finalAmount, termsAccepted, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       registrationDay, finalAmount, photoPath, termsAccepted, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         nextClientId, name, email, mobile, dob, age, gender, address, occupation,
         slot, JSON.stringify(membershipType), membershipPeriod, startDate, endDate,
-        registrationDay, finalAmount, termsAccepted ? 1 : 0, now, now
+        registrationDay, finalAmount, photoPath, termsAccepted ? 1 : 0, now, now
       ]
     );
 
@@ -503,7 +532,7 @@ app.post('/api/emails/send', async (req, res) => {
 // Add Payment
 app.post('/api/payments', async (req, res) => {
   try {
-    const { clientId, amount, finalAmount, paidAmount, discount, discountType, notes } = req.body;
+    const { clientId, name, amount, finalAmount, paidAmount, membershipPeriod, offerDiscount, discount, discountType, notes } = req.body;
 
     const client = await db.get('SELECT * FROM clients WHERE clientId = ?', [clientId]);
     if (!client) {
@@ -515,9 +544,9 @@ app.post('/api/payments', async (req, res) => {
     const now = new Date().toISOString();
 
     await db.run(
-      `INSERT INTO payments (clientId, amount, finalAmount, paidAmount, remainingAmount, discount, discountType, paidDate, notes, createdAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [clientId, amount, paymentAmount, paidAmount, remainingAmount, discount, discountType, now, notes, now]
+      `INSERT INTO payments (clientId, clientName, amount, finalAmount, paidAmount, remainingAmount, membershipPeriod, offerDiscount, discount, discountType, paidDate, notes, createdAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [clientId, name || client.name, amount, paymentAmount, paidAmount, remainingAmount, membershipPeriod || client.membershipPeriod, offerDiscount || 0, discount || 0, discountType, now, notes, now]
     );
 
     res.status(201).json({ success: true, message: 'Payment recorded successfully' });
