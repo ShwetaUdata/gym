@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useGym } from '@/context/GymContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,8 +10,9 @@ import { SendEmailModal } from './SendEmailModal';
 import { PaymentModal } from './PaymentModal';
 import { ExportPdfModal, ExportOptions } from './ExportPdfModal';
 import { BirthdayAlertModal } from './BirthdayAlertModal';
-import { PendingPaymentsModal } from './PendingPaymentsModal';
+import { PendingPaymentsModal, isPaymentReminderInCooldown } from './PendingPaymentsModal';
 import { FestivalEmailModal } from './FestivalEmailModal';
+import { isBirthdayEmailInCooldown } from './BirthdayAlertModal';
 import { Client } from '@/types/gym';
 import { useToast } from '@/hooks/use-toast';
 import { calculateDiscountedPrice } from '@/utils/pricing';
@@ -34,6 +35,12 @@ export function AdminDashboard() {
   const [showBirthdayModal, setShowBirthdayModal] = useState(false);
   const [showPendingPayments, setShowPendingPayments] = useState(false);
   const [showFestivalEmail, setShowFestivalEmail] = useState(false);
+  const [, forceUpdate] = useState(0);
+  
+  // Callback to refresh counts when email is sent
+  const handleEmailSent = useCallback(() => {
+    forceUpdate(prev => prev + 1);
+  }, []);
 
   if (loading) {
     return (
@@ -48,12 +55,14 @@ export function AdminDashboard() {
 
   const filteredClients = getClientBySearch(searchTerm);
 
-  // Count today's birthdays
+  // Count today's birthdays (excluding those in cooldown)
   const today = new Date();
   const todayMonth = today.getMonth() + 1;
   const todayDay = today.getDate();
   const birthdayCount = clients.filter((client) => {
     if (!client.dob) return false;
+    // Skip if birthday email already sent (in cooldown)
+    if (isBirthdayEmailInCooldown(client.clientId)) return false;
     let dobDate: Date;
     if (client.dob.includes('-')) {
       const parts = client.dob.split('-');
@@ -71,8 +80,10 @@ export function AdminDashboard() {
     return dobDate.getMonth() + 1 === todayMonth && dobDate.getDate() === todayDay;
   }).length;
 
-  // Count pending payments
+  // Count pending payments (excluding those in cooldown)
   const pendingPaymentsCount = clients.filter((client) => {
+    // Skip if reminder already sent (in cooldown)
+    if (isPaymentReminderInCooldown(client.clientId)) return false;
     const totalPaid = client.payments?.reduce((sum, p) => sum + p.paidAmount, 0) || 0;
     const totalAmount = client.finalAmount || calculateDiscountedPrice(client.membershipType, client.membershipPeriod);
     return totalAmount - totalPaid > 0;
@@ -446,6 +457,7 @@ export function AdminDashboard() {
         <BirthdayAlertModal
           clients={clients}
           onClose={() => setShowBirthdayModal(false)}
+          onEmailSent={handleEmailSent}
         />
       )}
 
@@ -454,6 +466,7 @@ export function AdminDashboard() {
           clients={clients}
           onClose={() => setShowPendingPayments(false)}
           onAddPayment={(client) => setPaymentClient(client)}
+          onEmailSent={handleEmailSent}
         />
       )}
 

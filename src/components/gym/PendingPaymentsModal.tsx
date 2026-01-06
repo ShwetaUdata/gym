@@ -12,13 +12,14 @@ interface PendingPaymentsModalProps {
   clients: Client[];
   onClose: () => void;
   onAddPayment: (client: Client) => void;
+  onEmailSent?: () => void;
 }
 
 const COOLDOWN_DAYS = 7;
 
 const getPaymentReminderKey = (clientId: string) => `payment_reminder_${clientId}`;
 
-const isPaymentReminderInCooldown = (clientId: string): boolean => {
+export const isPaymentReminderInCooldown = (clientId: string): boolean => {
   const sentTime = localStorage.getItem(getPaymentReminderKey(clientId));
   if (!sentTime) return false;
   const sentDate = new Date(parseInt(sentTime, 10));
@@ -31,7 +32,7 @@ const markPaymentReminderSent = (clientId: string) => {
   localStorage.setItem(getPaymentReminderKey(clientId), Date.now().toString());
 };
 
-export function PendingPaymentsModal({ clients, onClose, onAddPayment }: PendingPaymentsModalProps) {
+export function PendingPaymentsModal({ clients, onClose, onAddPayment, onEmailSent }: PendingPaymentsModalProps) {
   const { toast } = useToast();
   const [sendingTo, setSendingTo] = useState<string | null>(null);
   const [sentEmails, setSentEmails] = useState<Set<string>>(() => {
@@ -45,8 +46,10 @@ export function PendingPaymentsModal({ clients, onClose, onAddPayment }: Pending
     return inCooldown;
   });
 
-  // Get clients with pending payments
+  // Get clients with pending payments - HIDE those in cooldown
   const clientsWithPendingPayments = clients.filter((client) => {
+    // Hide if reminder already sent and in cooldown
+    if (isPaymentReminderInCooldown(client.clientId)) return false;
     const totalPaid = client.payments?.reduce((sum, p) => sum + p.paidAmount, 0) || 0;
     const totalAmount = client.finalAmount || calculateDiscountedPrice(client.membershipType, client.membershipPeriod);
     return totalAmount - totalPaid > 0;
@@ -111,6 +114,9 @@ export function PendingPaymentsModal({ clients, onClose, onAddPayment }: Pending
       markPaymentReminderSent(client.clientId);
       setSentEmails(prev => new Set([...prev, client.clientId]));
       
+      // Notify parent to update counts
+      onEmailSent?.();
+      
       toast({
         title: "Reminder Sent! 📧",
         description: `Payment reminder sent to ${client.name}`,
@@ -142,7 +148,8 @@ export function PendingPaymentsModal({ clients, onClose, onAddPayment }: Pending
           {clientsWithPendingPayments.length === 0 ? (
             <div className="text-center py-8">
               <CreditCard className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No pending payments!</p>
+              <p className="text-muted-foreground">No pending payments to show!</p>
+              <p className="text-xs text-muted-foreground mt-2">Clients with reminders sent will reappear after 1 week</p>
             </div>
           ) : (
             <>
