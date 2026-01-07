@@ -407,8 +407,8 @@ export function ClientRegistrationForm() {
             </h3>
             
             <div 
-              className="p-4 rounded-xl bg-secondary/30 border border-border space-y-3 max-h-48 overflow-y-auto text-sm text-muted-foreground scrollbar-hide"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              className="p-4 rounded-xl bg-secondary/30 border border-border space-y-3 max-h-48 overflow-y-scroll text-sm text-muted-foreground"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
               onScroll={(e) => {
                 const element = e.currentTarget;
                 const isAtBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 10;

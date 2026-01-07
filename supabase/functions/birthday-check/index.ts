@@ -80,13 +80,13 @@ const handler = async (req: Request): Promise<Response> => {
             <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
               <h2 style="color: #374151; margin-bottom: 20px;">Dear ${client.name},</h2>
               <p style="color: #374151; line-height: 1.6;">Happy Birthday! 🎉🎂</p>
-              <p style="color: #374151; line-height: 1.6;">On this special day, the entire PowerFit Gym family wishes you health, happiness, and strength!</p>
+              <p style="color: #374151; line-height: 1.6;">On this special day, the entire US Gymnasium family wishes you health, happiness, and strength!</p>
               <p style="color: #374151; line-height: 1.6;">As a birthday treat, enjoy a special workout session on us. Visit the front desk to claim your birthday reward.</p>
               <p style="color: #374151; line-height: 1.6;">Keep crushing your goals!</p>
-              <p style="color: #374151; line-height: 1.6; margin-top: 30px;">Warm wishes,<br/><strong>PowerFit Gym Team</strong></p>
+              <p style="color: #374151; line-height: 1.6; margin-top: 30px;">Warm wishes,<br/><strong>US Gymnasium Team</strong></p>
             </div>
             <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
-              <p>© ${new Date().getFullYear()} PowerFit Gym. All rights reserved.</p>
+              <p>© ${new Date().getFullYear()} US Gymnasium. All rights reserved.</p>
             </div>
           </div>
         `;
@@ -104,7 +104,7 @@ const handler = async (req: Request): Promise<Response> => {
         });
 
         await smtpClient.send({
-          from: EMAIL_USER,
+          from: `US GYMNASIUM <${EMAIL_USER}>`,
           to: client.email,
           subject: `Happy Birthday ${client.name}! 🎂`,
           content: "auto",
