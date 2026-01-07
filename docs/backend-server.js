@@ -532,7 +532,7 @@ app.post('/api/emails/send', async (req, res) => {
 // Add Payment
 app.post('/api/payments', async (req, res) => {
   try {
-    const { clientId, name, amount, finalAmount, paidAmount, membershipPeriod, offerDiscount, discount, discountType, notes } = req.body;
+    const { clientId, name, amount, finalAmount, paidAmount, membershipPeriod, offerDiscount, discount, discountType, notes, paidDate } = req.body;
 
     const client = await db.get('SELECT * FROM clients WHERE clientId = ?', [clientId]);
     if (!client) {
@@ -541,12 +541,14 @@ app.post('/api/payments', async (req, res) => {
 
     const paymentAmount = finalAmount || amount;
     const remainingAmount = paymentAmount - paidAmount;
+    // Use provided paidDate or current time
+    const paymentDateTime = paidDate || new Date().toISOString();
     const now = new Date().toISOString();
 
     await db.run(
       `INSERT INTO payments (clientId, clientName, amount, finalAmount, paidAmount, remainingAmount, membershipPeriod, offerDiscount, discount, discountType, paidDate, notes, createdAt)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [clientId, name || client.name, amount, paymentAmount, paidAmount, remainingAmount, membershipPeriod || client.membershipPeriod, offerDiscount || 0, discount || 0, discountType, now, notes, now]
+      [clientId, name || client.name, amount, paymentAmount, paidAmount, remainingAmount, membershipPeriod || client.membershipPeriod, offerDiscount || 0, discount || 0, discountType, paymentDateTime, notes, now]
     );
 
     res.status(201).json({ success: true, message: 'Payment recorded successfully' });

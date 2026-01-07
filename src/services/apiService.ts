@@ -77,6 +77,7 @@ export const paymentApi = {
     discount?: number;
     discountType?: string;
     notes?: string;
+    paidDate?: string;
   }) => {
     return fetchApi<{ success: boolean; message: string }>(
       API_ENDPOINTS.payments.create,
