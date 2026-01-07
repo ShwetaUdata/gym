@@ -10,6 +10,7 @@ interface GymHeaderProps {
 const navItems = [
   { to: "/", label: "Home" },
   { to: "/register", label: "Register" },
+  { to: "/scan", label: "Scan" },
 ];
 
 export function GymHeader({ showNav = true }: GymHeaderProps) {
