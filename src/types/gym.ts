@@ -32,13 +32,18 @@ export interface MembershipType {
 export interface Payment {
   id: number;
   clientId: string;
+  clientName?: string;
   amount: number;
+  finalAmount: number;
   paidAmount: number;
   remainingAmount: number;
+  membershipPeriod?: number;
+  offerDiscount?: number;
   discount: number;
   discountType: string;
   paidDate: string;
   notes: string;
+  createdAt?: string;
 }
 
 export interface PricingConfig {

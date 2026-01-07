@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useGym } from '@/context/GymContext';
 import { useToast } from '@/hooks/use-toast';
-import { formatCurrency, calculateDiscountedPrice } from '@/utils/pricing';
+import { formatCurrency, calculateDiscountedPrice, calculateBasePrice, getSpecialOffers } from '@/utils/pricing';
 import { paymentApi } from '@/services/apiService';
 import { CreditCard, IndianRupee } from 'lucide-react';
 
@@ -22,13 +22,24 @@ export function PaymentModal({ client, onClose }: PaymentModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const totalPaid = client.payments?.reduce((sum, p) => sum + p.paidAmount, 0) || 0;
+  // Calculate base price before discount
+  const baseAmount = calculateBasePrice(client.membershipType, client.membershipPeriod);
   // Use stored finalAmount if available, otherwise calculate discounted price
   const totalAmount = client.finalAmount || calculateDiscountedPrice(client.membershipType, client.membershipPeriod);
   const remainingAmount = totalAmount - totalPaid;
+  
+  // Calculate the discount applied
+  const discountAmount = baseAmount - totalAmount;
+  const discountPercentage = baseAmount > 0 ? Math.round((discountAmount / baseAmount) * 100) : 0;
+  
+  // Get the offer name
+  const offers = getSpecialOffers(client.membershipType, client.membershipPeriod);
+  const offerName = offers.length > 0 ? offers.map(o => o.type).join(', ') : 'No offer';
 
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
   const [paidDate, setPaidDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paidTime, setPaidTime] = useState(new Date().toTimeString().slice(0, 5));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,12 +57,21 @@ export function PaymentModal({ client, onClose }: PaymentModalProps) {
     setIsSubmitting(true);
 
     try {
+      // Create datetime string with date and time
+      const paidDateTime = `${paidDate}T${paidTime}:00`;
+      
       await paymentApi.create({
         clientId: client.clientId,
-        amount: totalAmount,
+        name: client.name,
+        amount: baseAmount,
         finalAmount: totalAmount,
         paidAmount: paymentAmount,
+        membershipPeriod: client.membershipPeriod,
+        offerDiscount: discountPercentage,
+        discount: discountAmount,
+        discountType: offerName,
         notes,
+        paidDate: paidDateTime,
       });
 
       // Refresh clients to get updated payment data
@@ -85,15 +105,28 @@ export function PaymentModal({ client, onClose }: PaymentModalProps) {
         </DialogHeader>
 
         <div className="p-4 rounded-xl bg-gradient-to-br from-primary/10 to-gym-gold/10 border border-primary/20 mb-4">
-          <div className="grid grid-cols-2 gap-4 text-center">
+          <div className="grid grid-cols-2 gap-4 text-center mb-3">
             <div>
-              <p className="text-sm text-muted-foreground">Total Due (After Discount)</p>
+              <p className="text-xs text-muted-foreground">Base Amount</p>
+              <p className="text-lg font-semibold">{formatCurrency(baseAmount)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Discount ({discountPercentage}%)</p>
+              <p className="text-lg font-semibold text-success">-{formatCurrency(discountAmount)}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4 text-center border-t border-primary/20 pt-3">
+            <div>
+              <p className="text-sm text-muted-foreground">Final Amount</p>
               <p className="text-xl font-bold">{formatCurrency(totalAmount)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Remaining</p>
               <p className="text-xl font-bold text-destructive">{formatCurrency(remainingAmount)}</p>
             </div>
+          </div>
+          <div className="text-center mt-2 text-xs text-muted-foreground">
+            {client.membershipPeriod} month{client.membershipPeriod > 1 ? 's' : ''} • {offerName}
           </div>
         </div>
 
@@ -114,14 +147,25 @@ export function PaymentModal({ client, onClose }: PaymentModalProps) {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="paidDate">Payment Date</Label>
-            <Input
-              id="paidDate"
-              type="date"
-              value={paidDate}
-              onChange={(e) => setPaidDate(e.target.value)}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="paidDate">Payment Date</Label>
+              <Input
+                id="paidDate"
+                type="date"
+                value={paidDate}
+                onChange={(e) => setPaidDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="paidTime">Payment Time</Label>
+              <Input
+                id="paidTime"
+                type="time"
+                value={paidTime}
+                onChange={(e) => setPaidTime(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

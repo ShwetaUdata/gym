@@ -195,7 +195,8 @@ export function AdminDashboard() {
         (client.payments || []).forEach(payment => {
           allPayments.push({
             clientId: client.clientId,
-            clientName: client.name,
+            clientName: payment.clientName || client.name,
+            membershipPeriod: payment.membershipPeriod || client.membershipPeriod,
             ...payment
           });
         });
@@ -211,22 +212,49 @@ export function AdminDashboard() {
         doc.text('Payment Records', 14, yPos);
         yPos += 8;
 
-        const paymentTableData = allPayments.map(p => [
-          p.clientId,
-          p.clientName,
-          new Date(p.date).toLocaleDateString('en-IN'),
-          `₹${p.paidAmount.toLocaleString()}`,
-          p.method || 'N/A',
-          p.note || '-'
-        ]);
+        const paymentTableData = allPayments.map(p => {
+          const baseAmount = p.amount || 0;
+          const finalAmount = p.finalAmount || baseAmount;
+          const discountAmount = baseAmount - finalAmount;
+          const paidDateTime = p.paidDate ? new Date(p.paidDate) : null;
+          const dateStr = paidDateTime && !isNaN(paidDateTime.getTime()) 
+            ? paidDateTime.toLocaleDateString('en-IN') 
+            : 'N/A';
+          const timeStr = paidDateTime && !isNaN(paidDateTime.getTime()) 
+            ? paidDateTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) 
+            : '';
+          
+          return [
+            p.clientId,
+            p.clientName,
+            `${p.membershipPeriod || '-'} month${(p.membershipPeriod || 0) > 1 ? 's' : ''}`,
+            `₹${baseAmount.toLocaleString()}`,
+            `₹${discountAmount.toLocaleString()} (${p.offerDiscount || 0}%)`,
+            `₹${finalAmount.toLocaleString()}`,
+            `₹${(p.paidAmount || 0).toLocaleString()}`,
+            `${dateStr} ${timeStr}`,
+            p.discountType || p.notes || '-'
+          ];
+        });
 
         autoTable(doc, {
           startY: yPos,
-          head: [['Client ID', 'Name', 'Date', 'Amount', 'Method', 'Note']],
+          head: [['Client ID', 'Name', 'Period', 'Base Amt', 'Discount', 'Final Amt', 'Paid', 'Date & Time', 'Offer/Note']],
           body: paymentTableData,
-          styles: { fontSize: 8 },
+          styles: { fontSize: 7 },
           headStyles: { fillColor: [39, 174, 96] },
           alternateRowStyles: { fillColor: [245, 245, 245] },
+          columnStyles: {
+            0: { cellWidth: 20 },
+            1: { cellWidth: 30 },
+            2: { cellWidth: 22 },
+            3: { cellWidth: 25 },
+            4: { cellWidth: 30 },
+            5: { cellWidth: 25 },
+            6: { cellWidth: 22 },
+            7: { cellWidth: 35 },
+            8: { cellWidth: 'auto' },
+          },
         });
 
         yPos = (doc as any).lastAutoTable.finalY + 15;
