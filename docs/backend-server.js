@@ -312,8 +312,18 @@ app.post('/api/clients/register', async (req, res) => {
     const {
       name, email, mobile, dob, age, gender, address, occupation,
       slot, membershipType, membershipPeriod, startDate, endDate,
-      registrationDay, finalAmount, termsAccepted, photo
+      registrationDay, finalAmount, termsAccepted, termsAcceptedBy, photo
     } = req.body;
+
+    // Log received data for debugging
+    console.log('Registration request received:', {
+      name,
+      email,
+      mobile,
+      hasPhoto: !!photo,
+      photoLength: photo ? photo.length : 0,
+      photoPrefix: photo ? photo.substring(0, 50) : 'none'
+    });
 
     if (!name || !email || !mobile || !dob || !slot) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -328,17 +338,28 @@ app.post('/api/clients/register', async (req, res) => {
     
     // Save photo to disk if provided
     let photoPath = null;
-    if (photo && photo.startsWith('data:image')) {
+    if (photo) {
       try {
-        const base64Data = photo.replace(/^data:image\/\w+;base64,/, '');
+        // Handle both with and without data URL prefix
+        let base64Data = photo;
+        if (photo.startsWith('data:image')) {
+          base64Data = photo.replace(/^data:image\/\w+;base64,/, '');
+        }
+        
         const sanitizedName = name.replace(/[^a-zA-Z0-9]/g, '_');
         const fileName = `${sanitizedName}_${nextClientId}.jpg`;
         photoPath = path.join(PHOTO_STORAGE_PATH, fileName);
-        fs.writeFileSync(photoPath, base64Data, 'base64');
-        console.log(`Photo saved: ${photoPath}`);
+        
+        // Create buffer from base64 and write to file
+        const buffer = Buffer.from(base64Data, 'base64');
+        fs.writeFileSync(photoPath, buffer);
+        console.log(`Photo saved successfully: ${photoPath} (${buffer.length} bytes)`);
       } catch (photoErr) {
         console.error('Error saving photo:', photoErr);
+        console.error('Photo error stack:', photoErr.stack);
       }
+    } else {
+      console.log('No photo provided in request');
     }
 
     await db.run(

@@ -1,4 +1,4 @@
-import { MembershipType, PRICING, DAY_OFFERS, SPECIAL_OFFERS, MONTH_OFFERS } from '@/types/gym';
+import { MembershipType, PRICING, MEMBERSHIP_OFFERS, getMembershipKey, MembershipOffer } from '@/types/gym';
 
 export function calculateBasePrice(membershipType: MembershipType, months: number): number {
   let monthlyTotal = 0;
@@ -16,37 +16,37 @@ export function getDayOfWeek(date: Date): string {
   return days[date.getDay()];
 }
 
-// Day-based offers removed - only membership period offers apply
+// Day-based offers removed
 export function getDayOffer(_date: Date): number {
-  return 0; // No day-based offers
+  return 0;
 }
 
-export function getMonthOffer(months: number): number {
-  // For 12+ months, yearly offer applies separately
-  if (months >= 12) return 0;
-  return MONTH_OFFERS[months] || 0;
+// Get available offers based on membership type and period
+export function getAvailableOffers(membershipType: MembershipType, months: number): MembershipOffer[] {
+  const membershipKey = getMembershipKey(membershipType);
+  
+  // For PT, also include free months offers
+  if (membershipKey === 'pt') {
+    return MEMBERSHIP_OFFERS.filter(offer => 
+      (offer.membershipKey === 'pt' || offer.membershipKey === 'pt_free') && 
+      offer.months === months
+    );
+  }
+  
+  return MEMBERSHIP_OFFERS.filter(offer => 
+    offer.membershipKey === membershipKey && offer.months === months
+  );
 }
 
-export function getSpecialOffers(membershipType: MembershipType, months: number): { type: string; percentage: number }[] {
-  const offers: { type: string; percentage: number }[] = [];
+// Legacy function - now returns offers from new system
+export function getSpecialOffers(membershipType: MembershipType, months: number): { type: string; percentage: number; freeMonths?: number }[] {
+  const offers = getAvailableOffers(membershipType, months);
   
-  // Month-based offer (only for less than 12 months)
-  const monthOffer = getMonthOffer(months);
-  if (monthOffer > 0) {
-    offers.push({ type: `${months} Month${months > 1 ? 's' : ''} Membership`, percentage: monthOffer });
-  }
-  
-  // Yearly membership offer
-  if (months >= 12) {
-    offers.push({ type: 'Yearly Membership', percentage: SPECIAL_OFFERS.yearlyMembership });
-  }
-  
-  // Gym + PT combo offer
-  if (membershipType.gym && membershipType.pt) {
-    offers.push({ type: 'Gym + PT Combo', percentage: SPECIAL_OFFERS.gymPtCombo });
-  }
-  
-  return offers;
+  return offers.map(offer => ({
+    type: offer.label,
+    percentage: offer.discountPercent,
+    freeMonths: offer.freeMonths,
+  }));
 }
 
 export function calculateFinalPrice(
@@ -54,13 +54,7 @@ export function calculateFinalPrice(
   dayOffer: number,
   selectedSpecialOffer?: number
 ): { finalPrice: number; totalDiscount: number } {
-  let discount = 0;
-  
-  if (selectedSpecialOffer) {
-    discount = Math.max(dayOffer, selectedSpecialOffer);
-  } else {
-    discount = dayOffer;
-  }
+  let discount = selectedSpecialOffer || dayOffer || 0;
   
   const discountAmount = (basePrice * discount) / 100;
   const finalPrice = basePrice - discountAmount;
@@ -68,20 +62,20 @@ export function calculateFinalPrice(
   return { finalPrice, totalDiscount: discount };
 }
 
-// Calculate discounted price based on membership period for admin dashboard display
+// Calculate discounted price based on membership type and period
 export function calculateDiscountedPrice(membershipType: MembershipType, months: number): number {
   const basePrice = calculateBasePrice(membershipType, months);
-  const offers = getSpecialOffers(membershipType, months);
+  const offers = getAvailableOffers(membershipType, months);
   
-  // Get the best offer percentage
-  let maxOffer = 0;
+  // Get the best discount percentage offer
+  let maxDiscount = 0;
   offers.forEach(offer => {
-    if (offer.percentage > maxOffer) {
-      maxOffer = offer.percentage;
+    if (offer.discountPercent > maxDiscount) {
+      maxDiscount = offer.discountPercent;
     }
   });
   
-  const discountAmount = (basePrice * maxOffer) / 100;
+  const discountAmount = (basePrice * maxDiscount) / 100;
   return basePrice - discountAmount;
 }
 
@@ -111,4 +105,11 @@ export function calculateAge(dob: string): number {
   }
   
   return age;
+}
+
+// Calculate end date with free months for PT offers
+export function calculateEndDateWithFreeMonths(startDate: string, months: number, freeMonths: number): string {
+  const start = new Date(startDate);
+  start.setMonth(start.getMonth() + months + freeMonths);
+  return start.toISOString().split('T')[0];
 }

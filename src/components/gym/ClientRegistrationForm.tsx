@@ -308,7 +308,7 @@ export function ClientRegistrationForm() {
                 { key: 'gym', label: 'Gym', icon: Dumbbell, price: '₹1,500/mo' },
                 { key: 'cardio', label: 'Cardio', icon: Heart, price: '₹500/mo' },
                 { key: 'crossfit', label: 'Crossfit', icon: Zap, price: '₹500/mo' },
-                { key: 'pt', label: 'PT', icon: UserCheck, price: '₹12,000/mo' },
+                { key: 'pt', label: 'PT', icon: UserCheck, price: '₹15,000/mo' },
               ].map(({ key, label, icon: Icon, price }) => (
                 <label
                   key={key}
