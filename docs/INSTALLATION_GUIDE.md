@@ -15,19 +15,19 @@ PowerFit can be installed on ANY device:
 ## 🖥️ Option 1: Desktop Application (Windows/Mac/Linux)
 
 ### Prerequisites
-- Node.js 18+ installed
+- **Node.js 18-20** (NOT Node.js 24+) - Download from https://nodejs.org/
 - Git installed
+
+> ⚠️ **IMPORTANT**: Use Node.js 18 LTS or 20 LTS. Node.js 24+ has compatibility issues with native modules.
 
 ### Step-by-Step Installation
 
 #### 1. Download the Project
-```bash
-git clone <your-repo-url>
-cd powerfit-gym
-```
+Download the ZIP file from Lovable and extract it to a folder like `C:\PowerFit` or `~/PowerFit`
 
 #### 2. Install Frontend Dependencies
 ```bash
+cd powerfit-gym
 npm install
 ```
 
@@ -42,15 +42,14 @@ cd electron
 npm install
 ```
 
-#### 5. Copy Backend Server
-Copy your `backend-server.js` file to `electron/server.js`
+> The `server.js` file is already included in the electron folder - no copying needed!
 
-#### 6. Run in Development
+#### 5. Run in Development
 ```bash
 npm start
 ```
 
-#### 7. Build Installer
+#### 6. Build Installer
 
 **For Windows:**
 ```bash
