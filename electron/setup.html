@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PowerFit Setup</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0d1117 0%, #1a2332 100%);
+      color: #f0f6fc;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .setup-container {
+      background: rgba(22, 27, 34, 0.95);
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(0, 191, 255, 0.2);
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .logo h1 {
+      font-size: 28px;
+      background: linear-gradient(135deg, #00bfff, #00e5cc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .logo p {
+      color: #8b949e;
+      margin-top: 8px;
+    }
+
+    .step {
+      display: none;
+    }
+
+    .step.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #c9d1d9;
+      font-weight: 500;
+    }
+
+    input[type="password"],
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      background: #0d1117;
+      color: #f0f6fc;
+      font-size: 16px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #00bfff;
+      box-shadow: 0 0 0 3px rgba(0, 191, 255, 0.2);
+    }
+
+    .path-input {
+      display: flex;
+      gap: 10px;
+    }
+
+    .path-input input {
+      flex: 1;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #00bfff, #00e5cc);
+      color: #0d1117;
+      width: 100%;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0, 191, 255, 0.4);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: #30363d;
+      color: #f0f6fc;
+    }
+
+    .btn-secondary:hover {
+      background: #484f58;
+    }
+
+    .error {
+      color: #f85149;
+      font-size: 14px;
+      margin-top: 8px;
+      display: none;
+    }
+
+    .error.show {
+      display: block;
+    }
+
+    .success {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #00bfff, #00e5cc);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+    }
+
+    .success-icon svg {
+      width: 40px;
+      height: 40px;
+      color: #0d1117;
+    }
+
+    .step-indicator {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    .step-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #30363d;
+    }
+
+    .step-dot.active {
+      background: #00bfff;
+    }
+
+    .step-dot.completed {
+      background: #00e5cc;
+    }
+
+    .info-text {
+      color: #8b949e;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(0, 0, 0, 0.3);
+      border-radius: 50%;
+      border-top-color: #0d1117;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 10px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="setup-container">
+    <div class="logo">
+      <h1>💪 PowerFit</h1>
+      <p>Gym Management System</p>
+    </div>
+
+    <div class="step-indicator">
+      <div class="step-dot active" id="dot1"></div>
+      <div class="step-dot" id="dot2"></div>
+      <div class="step-dot" id="dot3"></div>
+    </div>
+
+    <!-- Step 1: Secret Key -->
+    <div class="step active" id="step1">
+      <div class="form-group">
+        <label for="secretKey">🔐 Enter Secret Key</label>
+        <input type="password" id="secretKey" placeholder="Enter your secret key" autofocus>
+        <div class="error" id="keyError">Invalid secret key. Please try again.</div>
+        <p class="info-text">Enter the administrator secret key to continue setup.</p>
+      </div>
+      <button class="btn btn-primary" onclick="verifyKey()">Verify & Continue</button>
+    </div>
+
+    <!-- Step 2: Configure Paths -->
+    <div class="step" id="step2">
+      <div class="form-group">
+        <label for="photosPath">📁 Photos Storage Path</label>
+        <div class="path-input">
+          <input type="text" id="photosPath" readonly>
+          <button class="btn btn-secondary" onclick="selectPhotosFolder()">Browse</button>
+        </div>
+        <p class="info-text">Where client photos will be saved.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="dbPath">💾 Database Path</label>
+        <div class="path-input">
+          <input type="text" id="dbPath" readonly>
+          <button class="btn btn-secondary" onclick="selectDbFolder()">Browse</button>
+        </div>
+        <p class="info-text">Where the database file will be stored.</p>
+      </div>
+
+      <button class="btn btn-primary" onclick="saveAndStart()">
+        <span id="startBtnText">Save & Start Application</span>
+      </button>
+    </div>
+
+    <!-- Step 3: Success -->
+    <div class="step" id="step3">
+      <div class="success">
+        <div class="success-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+        <h2>Setup Complete!</h2>
+        <p style="color: #8b949e; margin: 15px 0;">PowerFit is ready to use.</p>
+        <button class="btn btn-primary" onclick="launchApp()">Launch Application</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentStep = 1;
+    let config = {
+      photosPath: '',
+      dbPath: '',
+      verified: false
+    };
+
+    // Initialize with default paths
+    window.electronAPI.getDefaultPaths().then(paths => {
+      document.getElementById('photosPath').value = paths.photosPath;
+      document.getElementById('dbPath').value = paths.dbPath;
+      config.photosPath = paths.photosPath;
+      config.dbPath = paths.dbPath;
+    });
+
+    function showStep(step) {
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+      document.getElementById(`step${step}`).classList.add('active');
+      
+      document.querySelectorAll('.step-dot').forEach((dot, i) => {
+        dot.classList.remove('active', 'completed');
+        if (i + 1 < step) dot.classList.add('completed');
+        if (i + 1 === step) dot.classList.add('active');
+      });
+      
+      currentStep = step;
+    }
+
+    async function verifyKey() {
+      const key = document.getElementById('secretKey').value;
+      const errorEl = document.getElementById('keyError');
+      
+      if (!key) {
+        errorEl.classList.add('show');
+        errorEl.textContent = 'Please enter a secret key.';
+        return;
+      }
+
+      const valid = await window.electronAPI.verifySecretKey(key);
+      
+      if (valid) {
+        config.verified = true;
+        errorEl.classList.remove('show');
+        showStep(2);
+      } else {
+        errorEl.classList.add('show');
+        errorEl.textContent = 'Invalid secret key. Please try again.';
+      }
+    }
+
+    async function selectPhotosFolder() {
+      const folder = await window.electronAPI.selectFolder();
+      if (folder) {
+        document.getElementById('photosPath').value = folder;
+        config.photosPath = folder;
+      }
+    }
+
+    async function selectDbFolder() {
+      const folder = await window.electronAPI.selectFolder();
+      if (folder) {
+        const dbPath = folder + '/gym.db';
+        document.getElementById('dbPath').value = dbPath;
+        config.dbPath = dbPath;
+      }
+    }
+
+    async function saveAndStart() {
+      const btn = document.querySelector('#step2 .btn-primary');
+      const btnText = document.getElementById('startBtnText');
+      
+      btn.disabled = true;
+      btnText.innerHTML = '<span class="loading"></span>Starting...';
+
+      config.photosPath = document.getElementById('photosPath').value;
+      config.dbPath = document.getElementById('dbPath').value;
+
+      const success = await window.electronAPI.saveConfigAndStart(config);
+      
+      if (success) {
+        showStep(3);
+      } else {
+        btn.disabled = false;
+        btnText.textContent = 'Save & Start Application';
+        alert('Failed to start the application. Please check the paths and try again.');
+      }
+    }
+
+    function launchApp() {
+      // Navigate to main app
+      window.location.href = '../dist/index.html';
+    }
+
+    // Enter key support
+    document.getElementById('secretKey').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') verifyKey();
+    });
+  </script>
+</body>
+</html>
