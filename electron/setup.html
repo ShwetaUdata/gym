@@ -359,14 +359,29 @@
       config.photosPath = document.getElementById('photosPath').value;
       config.dbPath = document.getElementById('dbPath').value;
 
-      const success = await window.electronAPI.saveConfigAndStart(config);
-      
-      if (success) {
-        showStep(3);
-      } else {
+      // Validate paths are not empty
+      if (!config.photosPath || !config.dbPath) {
         btn.disabled = false;
         btnText.textContent = 'Save & Start Application';
-        alert('Failed to start the application. Please check the paths and try again.');
+        alert('Please select both Photos Storage Path and Database Path.');
+        return;
+      }
+
+      try {
+        const result = await window.electronAPI.saveConfigAndStart(config);
+        
+        if (result && result.success) {
+          showStep(3);
+        } else {
+          btn.disabled = false;
+          btnText.textContent = 'Save & Start Application';
+          const errorMsg = result && result.error ? result.error : 'Unknown error occurred';
+          alert('Failed to start the application.\n\nError: ' + errorMsg + '\n\nPlease check the paths and try again.');
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btnText.textContent = 'Save & Start Application';
+        alert('Failed to start the application.\n\nError: ' + err.message);
       }
     }
 
