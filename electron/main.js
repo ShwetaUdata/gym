@@ -60,20 +60,30 @@ const startBackend = async (photosPath, dbPath) => {
     process.env.DB_PATH = dbPath;
     process.env.PORT = '5000';
 
-    // Validate DB path
+    console.log('Starting backend with paths:', { photosPath, dbPath });
+
+    // Validate DB path - if it's a directory, append gym.db
     if (fs.existsSync(dbPath) && fs.lstatSync(dbPath).isDirectory()) {
-      throw new Error('DB_PATH points to a folder. Please select a folder (we will create gym.db) or a .db file path.');
+      dbPath = path.join(dbPath, 'gym.db');
+      process.env.DB_PATH = dbPath;
+      console.log('DB path was a directory, updated to:', dbPath);
     }
 
-    // Ensure directories exist
+    // Ensure photos directory exists
     if (!fs.existsSync(photosPath)) {
       fs.mkdirSync(photosPath, { recursive: true });
+      console.log('Created photos directory:', photosPath);
     }
 
+    // Ensure database directory exists
     const dbDir = path.dirname(dbPath);
     if (!fs.existsSync(dbDir)) {
       fs.mkdirSync(dbDir, { recursive: true });
+      console.log('Created database directory:', dbDir);
     }
+
+    // Clear require cache to reload server module fresh
+    delete require.cache[require.resolve('./server.js')];
 
     // Import and start server
     const backend = require('./server.js');
@@ -83,11 +93,11 @@ const startBackend = async (photosPath, dbPath) => {
     // Keep handle so we can close on quit
     server = backend.startServer(Number(process.env.PORT || 5000));
 
-    console.log('Backend started successfully');
-    return true;
+    console.log('Backend started successfully on port 5000');
+    return { success: true };
   } catch (error) {
     console.error('Failed to start backend:', error);
-    return false;
+    return { success: false, error: error.message };
   }
 };
 
@@ -168,11 +178,11 @@ ipcMain.handle('verify-secret-key', (event, key) => {
 ipcMain.handle('save-config-and-start', async (event, config) => {
   try {
     saveConfig(config);
-    const success = await startBackend(config.photosPath, config.dbPath);
-    return success;
+    const result = await startBackend(config.photosPath, config.dbPath);
+    return result;
   } catch (error) {
     console.error('Error saving config:', error);
-    return false;
+    return { success: false, error: error.message };
   }
 });
 
@@ -186,11 +196,12 @@ app.whenReady().then(async () => {
   
   if (config && config.photosPath && config.dbPath && config.verified) {
     // Config exists, start backend and show main window
-    const success = await startBackend(config.photosPath, config.dbPath);
-    if (success) {
+    const result = await startBackend(config.photosPath, config.dbPath);
+    if (result.success) {
       createMainWindow();
     } else {
       // Failed to start, show setup again
+      console.error('Startup failed:', result.error);
       createSetupWindow();
     }
   } else {
