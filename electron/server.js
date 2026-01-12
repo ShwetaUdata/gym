@@ -11,21 +11,21 @@ let db;
 let dbPath;
 let photoPath;
 let SQL;
+let httpServer = null;
 
-// Initialize sql.js
-async function initSqlJs() {
-  const initSqlJsModule = require('sql.js');
-  SQL = await initSqlJsModule();
+async function ensureSql() {
+  if (!SQL) {
+    SQL = await initSqlJs();
+  }
 }
 
 // Initialize Database
 async function initializeDatabase(customDbPath) {
-  if (!SQL) {
-    await initSqlJs();
-  }
-  
+  await ensureSql();
+
   dbPath = customDbPath || path.join(__dirname, 'gym.db');
-  
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+
   // Load existing database or create new one
   if (fs.existsSync(dbPath)) {
     const buffer = fs.readFileSync(dbPath);
@@ -556,14 +556,33 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'Server running', timestamp: new Date().toISOString() });
 });
 
+// Start/stop helpers for Electron
+function startServer(port = PORT) {
+  if (httpServer) return httpServer;
+  httpServer = app.listen(port, () => {
+    console.log(`Server running on http://localhost:${port}`);
+  });
+  return httpServer;
+}
+
+function stopServer() {
+  if (!httpServer) return;
+  httpServer.close();
+  httpServer = null;
+}
+
 // Export for Electron
-module.exports = { app, initializeDatabase, setPhotoPath, PORT };
+module.exports = { app, initializeDatabase, setPhotoPath, startServer, stopServer, PORT };
 
 // Start server if running standalone
 if (require.main === module) {
-  initializeDatabase().then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
+  const port = Number(process.env.PORT || PORT);
+  const resolvedDb = process.env.DB_PATH;
+  const resolvedPhotos = process.env.PHOTOS_PATH || path.join(__dirname, 'Photos');
+
+  initializeDatabase(resolvedDb).then(() => {
+    setPhotoPath(resolvedPhotos);
+    startServer(port);
   });
 }
+

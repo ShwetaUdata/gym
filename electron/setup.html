@@ -341,11 +341,13 @@
     async function selectDbFolder() {
       const folder = await window.electronAPI.selectFolder();
       if (folder) {
-        const dbPath = folder + '/gym.db';
+        const sep = folder.includes('\\') ? '\\' : '/';
+        const dbPath = folder.endsWith(sep) ? `${folder}gym.db` : `${folder}${sep}gym.db`;
         document.getElementById('dbPath').value = dbPath;
         config.dbPath = dbPath;
       }
     }
+
 
     async function saveAndStart() {
       const btn = document.querySelector('#step2 .btn-primary');

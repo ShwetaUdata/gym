@@ -59,19 +59,30 @@ const startBackend = async (photosPath, dbPath) => {
     process.env.PHOTOS_PATH = photosPath;
     process.env.DB_PATH = dbPath;
     process.env.PORT = '5000';
-    
+
+    // Validate DB path
+    if (fs.existsSync(dbPath) && fs.lstatSync(dbPath).isDirectory()) {
+      throw new Error('DB_PATH points to a folder. Please select a folder (we will create gym.db) or a .db file path.');
+    }
+
     // Ensure directories exist
     if (!fs.existsSync(photosPath)) {
       fs.mkdirSync(photosPath, { recursive: true });
     }
-    
+
     const dbDir = path.dirname(dbPath);
     if (!fs.existsSync(dbDir)) {
       fs.mkdirSync(dbDir, { recursive: true });
     }
-    
+
     // Import and start server
-    server = require('./server.js');
+    const backend = require('./server.js');
+    await backend.initializeDatabase(dbPath);
+    backend.setPhotoPath(photosPath);
+
+    // Keep handle so we can close on quit
+    server = backend.startServer(Number(process.env.PORT || 5000));
+
     console.log('Backend started successfully');
     return true;
   } catch (error) {
@@ -79,6 +90,7 @@ const startBackend = async (photosPath, dbPath) => {
     return false;
   }
 };
+
 
 // Create the main window
 const createMainWindow = () => {
@@ -139,11 +151,13 @@ ipcMain.handle('get-default-paths', () => {
 });
 
 ipcMain.handle('select-folder', async () => {
-  const result = await dialog.showOpenDialog({
+  const win = BrowserWindow.getFocusedWindow();
+  const result = await dialog.showOpenDialog(win || undefined, {
     properties: ['openDirectory', 'createDirectory']
   });
   return result.canceled ? null : result.filePaths[0];
 });
+
 
 ipcMain.handle('verify-secret-key', (event, key) => {
   // You can customize this secret key
