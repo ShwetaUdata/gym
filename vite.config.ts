@@ -9,6 +9,8 @@ export default defineConfig(({ mode }) => {
   const apiTarget = env.VITE_API_URL || "http://localhost:5000";
 
   return {
+    // Use relative paths for Electron file:// protocol
+    base: "./",
     server: {
       host: "::",
       port: 8080,
@@ -25,6 +27,15 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
+      },
+    },
+    build: {
+      // Ensure assets use relative paths
+      assetsDir: "assets",
+      rollupOptions: {
+        output: {
+          manualChunks: undefined,
+        },
       },
     },
   };
