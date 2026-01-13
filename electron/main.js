@@ -124,7 +124,29 @@ const createMainWindow = () => {
     mainWindow.loadURL('http://localhost:8080');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    // Check multiple possible locations for the frontend build
+    const possiblePaths = [
+      path.join(__dirname, '../dist/index.html'),
+      path.join(__dirname, '../frontend/dist/index.html'),
+      path.join(app.getAppPath(), 'dist/index.html'),
+      path.join(app.getAppPath(), 'frontend/dist/index.html')
+    ];
+    
+    let loadPath = null;
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        loadPath = p;
+        console.log('Found frontend at:', p);
+        break;
+      }
+    }
+    
+    if (loadPath) {
+      mainWindow.loadFile(loadPath);
+    } else {
+      console.error('Frontend not found. Checked:', possiblePaths);
+      mainWindow.loadURL('data:text/html,<h1>Frontend not found</h1><p>Please run npm run build in the frontend folder first.</p>');
+    }
   }
 
   mainWindow.on('closed', () => {
