@@ -117,10 +117,21 @@ function saveDatabase() {
   }
 }
 
+// Normalize params for sql.js (it throws if any bound value is `undefined`)
+function normalizeSqlParam(value) {
+  if (value === undefined) return null;
+  if (typeof value === 'number' && !Number.isFinite(value)) return null;
+  return value;
+}
+
+function normalizeSqlParams(params) {
+  return Array.isArray(params) ? params.map(normalizeSqlParam) : params;
+}
+
 // Helper to run SELECT queries
 function dbAll(sql, params = []) {
   const stmt = db.prepare(sql);
-  stmt.bind(params);
+  stmt.bind(normalizeSqlParams(params));
   const results = [];
   while (stmt.step()) {
     results.push(stmt.getAsObject());
@@ -137,7 +148,7 @@ function dbGet(sql, params = []) {
 
 // Helper to run INSERT/UPDATE/DELETE
 function dbRun(sql, params = []) {
-  db.run(sql, params);
+  db.run(sql, normalizeSqlParams(params));
   saveDatabase();
 }
 
@@ -295,6 +306,15 @@ app.post('/api/clients/register', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    if (!membershipType) {
+      return res.status(400).json({ error: 'Missing membership type' });
+    }
+
+    const membershipTypeJson = JSON.stringify(membershipType);
+    if (!membershipTypeJson) {
+      return res.status(400).json({ error: 'Invalid membership type' });
+    }
+
     const lastClient = dbGet('SELECT clientId FROM clients ORDER BY id DESC LIMIT 1');
     const nextClientId = lastClient 
       ? (parseInt(lastClient.clientId) + 1).toString() 
@@ -329,9 +349,26 @@ app.post('/api/clients/register', async (req, res) => {
        registrationDay, finalAmount, photoPath, termsAccepted, createdAt, updatedAt)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        nextClientId, name, email, mobile, dob, age, gender, address, occupation,
-        slot, JSON.stringify(membershipType), membershipPeriod, startDate, endDate,
-        registrationDay, finalAmount, savedPhotoPath, termsAccepted ? 1 : 0, now, now
+        nextClientId,
+        name,
+        email,
+        mobile,
+        dob,
+        age,
+        gender,
+        address,
+        occupation,
+        slot,
+        membershipTypeJson,
+        membershipPeriod,
+        startDate,
+        endDate,
+        registrationDay,
+        finalAmount,
+        savedPhotoPath,
+        termsAccepted ? 1 : 0,
+        now,
+        now,
       ]
     );
 
