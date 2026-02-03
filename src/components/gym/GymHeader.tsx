@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Dumbbell, Menu } from "lucide-react";
+import { Dumbbell, Menu, Download } from "lucide-react";
 import { Link } from "react-router-dom";
+import { usePWA } from "@/hooks/usePWA";
 
 interface GymHeaderProps {
   showNav?: boolean;
@@ -14,6 +15,8 @@ const navItems = [
 ];
 
 export function GymHeader({ showNav = true }: GymHeaderProps) {
+  const { canInstall, isStandalone } = usePWA();
+
   return (
     <header className="sticky top-0 z-50 glass border-b border-border/50">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -40,6 +43,15 @@ export function GymHeader({ showNav = true }: GymHeaderProps) {
                   {item.label}
                 </Link>
               ))}
+              {canInstall && !isStandalone && (
+                <Link
+                  to="/install"
+                  className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Install App
+                </Link>
+              )}
             </nav>
 
             {/* Mobile nav */}
@@ -60,6 +72,14 @@ export function GymHeader({ showNav = true }: GymHeaderProps) {
                         <Link to={item.to}>{item.label}</Link>
                       </Button>
                     ))}
+                    {canInstall && !isStandalone && (
+                      <Button variant="default" className="justify-start" asChild>
+                        <Link to="/install">
+                          <Download className="w-4 h-4 mr-2" />
+                          Install App
+                        </Link>
+                      </Button>
+                    )}
                   </nav>
                 </SheetContent>
               </Sheet>
