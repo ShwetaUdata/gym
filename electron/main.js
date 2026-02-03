@@ -59,26 +59,48 @@ const startBackend = async (photosPath, dbPath) => {
     process.env.PHOTOS_PATH = photosPath;
     process.env.DB_PATH = dbPath;
     process.env.PORT = '5000';
-    
-    // Ensure directories exist
+
+    console.log('Starting backend with paths:', { photosPath, dbPath });
+
+    // Validate DB path - if it's a directory, append gym.db
+    if (fs.existsSync(dbPath) && fs.lstatSync(dbPath).isDirectory()) {
+      dbPath = path.join(dbPath, 'gym.db');
+      process.env.DB_PATH = dbPath;
+      console.log('DB path was a directory, updated to:', dbPath);
+    }
+
+    // Ensure photos directory exists
     if (!fs.existsSync(photosPath)) {
       fs.mkdirSync(photosPath, { recursive: true });
+      console.log('Created photos directory:', photosPath);
     }
-    
+
+    // Ensure database directory exists
     const dbDir = path.dirname(dbPath);
     if (!fs.existsSync(dbDir)) {
       fs.mkdirSync(dbDir, { recursive: true });
+      console.log('Created database directory:', dbDir);
     }
-    
+
+    // Clear require cache to reload server module fresh
+    delete require.cache[require.resolve('./server.js')];
+
     // Import and start server
-    server = require('./server.js');
-    console.log('Backend started successfully');
-    return true;
+    const backend = require('./server.js');
+    await backend.initializeDatabase(dbPath);
+    backend.setPhotoPath(photosPath);
+
+    // Keep handle so we can close on quit
+    server = backend.startServer(Number(process.env.PORT || 5000));
+
+    console.log('Backend started successfully on port 5000');
+    return { success: true };
   } catch (error) {
     console.error('Failed to start backend:', error);
-    return false;
+    return { success: false, error: error.message };
   }
 };
+
 
 // Create the main window
 const createMainWindow = () => {
@@ -102,7 +124,29 @@ const createMainWindow = () => {
     mainWindow.loadURL('http://localhost:8080');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    // Check multiple possible locations for the frontend build
+    const possiblePaths = [
+      path.join(__dirname, '../dist/index.html'),
+      path.join(__dirname, '../frontend/dist/index.html'),
+      path.join(app.getAppPath(), 'dist/index.html'),
+      path.join(app.getAppPath(), 'frontend/dist/index.html')
+    ];
+    
+    let loadPath = null;
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        loadPath = p;
+        console.log('Found frontend at:', p);
+        break;
+      }
+    }
+    
+    if (loadPath) {
+      mainWindow.loadFile(loadPath);
+    } else {
+      console.error('Frontend not found. Checked:', possiblePaths);
+      mainWindow.loadURL('data:text/html,<h1>Frontend not found</h1><p>Please run npm run build in the frontend folder first.</p>');
+    }
   }
 
   mainWindow.on('closed', () => {
@@ -139,11 +183,13 @@ ipcMain.handle('get-default-paths', () => {
 });
 
 ipcMain.handle('select-folder', async () => {
-  const result = await dialog.showOpenDialog({
+  const win = BrowserWindow.getFocusedWindow();
+  const result = await dialog.showOpenDialog(win || undefined, {
     properties: ['openDirectory', 'createDirectory']
   });
   return result.canceled ? null : result.filePaths[0];
 });
+
 
 ipcMain.handle('verify-secret-key', (event, key) => {
   // You can customize this secret key
@@ -154,11 +200,11 @@ ipcMain.handle('verify-secret-key', (event, key) => {
 ipcMain.handle('save-config-and-start', async (event, config) => {
   try {
     saveConfig(config);
-    const success = await startBackend(config.photosPath, config.dbPath);
-    return success;
+    const result = await startBackend(config.photosPath, config.dbPath);
+    return result;
   } catch (error) {
     console.error('Error saving config:', error);
-    return false;
+    return { success: false, error: error.message };
   }
 });
 
@@ -172,11 +218,12 @@ app.whenReady().then(async () => {
   
   if (config && config.photosPath && config.dbPath && config.verified) {
     // Config exists, start backend and show main window
-    const success = await startBackend(config.photosPath, config.dbPath);
-    if (success) {
+    const result = await startBackend(config.photosPath, config.dbPath);
+    if (result.success) {
       createMainWindow();
     } else {
       // Failed to start, show setup again
+      console.error('Startup failed:', result.error);
       createSetupWindow();
     }
   } else {
