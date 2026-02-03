@@ -9,6 +9,7 @@ import Register from "./pages/Register";
 import Payment from "./pages/Payment";
 import Admin from "./pages/Admin";
 import Scan from "./pages/Scan";
+import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 
 // Use HashRouter for Electron (file:// protocol doesn't work with BrowserRouter)
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/payment/:clientId" element={<Payment />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/scan" element={<Scan />} />
+            <Route path="/install" element={<Install />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Router>
